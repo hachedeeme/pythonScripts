@@ -203,9 +203,16 @@ class FormEditFile(ABMFile):
 
 	def defineVariables(self):
 		for key in self.table.keys():
-			code += """ """
 			self.addLine("		$this->" + key + " = new Zend_Form_Element_Text('" + key + "');")
 			self.addLine("		$this->" + key + "->setLabel('" + first_to_uppercase(key) + "');")
+			fiel_type = self.table[key]
+			if contains('varchar', fiel_type):
+				len_field = get_number(fiel_type)
+				self.addLine("		$this->" + key + "->addValidator('stringLength', false, array(0, " + len_field + "));")
+
+			if key != 'id':
+				self.addLine("		$this->" + key + "->setRequired(true);")
+	
 			self.addLine("		$this->addElement($this->" + key + ");")
 			self.addLine("")
 
@@ -441,17 +448,17 @@ class ABMCreator(object):
 
 	def initialize(self):
 		# Backend
-		self.files.append(ModelFile(self.class_name, self.plural_name))
-		self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
-		self.files.append(FormListFile(self.class_name, self.plural_name))
+		#self.files.append(ModelFile(self.class_name, self.plural_name))
+		#self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
+		#self.files.append(FormListFile(self.class_name, self.plural_name))
 		self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
 		self.files.append(ControllerFile(self.class_name, self.plural_name))
 		# Frontend
-		self.files.append(ServiceFile(self.class_name, self.plural_name))
-		self.files.append(EditControllerFile(self.class_name, self.plural_name))
-		self.files.append(ListControllerFile(self.class_name, self.plural_name))
-		self.files.append(ListHtmlFile(self.class_name, self.plural_name, self.table))
-		self.files.append(EditHtmlFile(self.class_name, self.plural_name, self.table))
+		# self.files.append(ServiceFile(self.class_name, self.plural_name))
+		# self.files.append(EditControllerFile(self.class_name, self.plural_name))
+		# self.files.append(ListControllerFile(self.class_name, self.plural_name))
+		# self.files.append(ListHtmlFile(self.class_name, self.plural_name, self.table))
+		# self.files.append(EditHtmlFile(self.class_name, self.plural_name, self.table))
 
 	def execute(self):
 		for abm_file in self.files:
@@ -512,7 +519,7 @@ table['mobile'] = 'varchar(100)'
 # );
 
 creator = ABMCreator('CarAgencie', 'CarAgencies', table)
-#creator.execute()
+creator.execute()
 
 
 # x = """    public function getAction() {
