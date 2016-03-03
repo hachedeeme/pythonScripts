@@ -3,6 +3,7 @@ import re
 
 first_to_lowercase = lambda s: s[:1].lower() + s[1:] if s else ''
 first_to_uppercase = lambda s: s[:1].upper() + s[1:] if s else ''
+get_number = lambda s: filter(str.isdigit, s)
 
 def to_snake_case(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
@@ -11,6 +12,9 @@ def to_snake_case(name):
 def to_res(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1-\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1-\2', s1).lower()
+
+def contains(sub_string, string):
+	return sub_string in string
 
 # ============================================================================================================
 class ABMFile():
@@ -58,10 +62,10 @@ class ControllerFile(ABMFile):
 		self.addLine("  public function indexAction() {")
 		self.addLine("  	$form = new Application_Form_" + MayCLASSNAME + "List();")
 		self.addLine("  	if ($form->isValid($this->_getAllParams())) {")
-		self.addLine("			$this->view->" + MinPLURALNAME + " = $this->_model->fetchByFilters($form->getValues())->toArray();")
+		self.addLine("			$this->view->" + to_snake_case(MinPLURALNAME) + " = $this->_model->fetchByFilters($form->getValues())->toArray();")
 		self.addLine("		} else {")
 		self.addLine("			$this->getResponse()->setHttpResponseCode(503);")
-		self.addLine("			$this->view->error = $form->getErrorMessages();")
+		self.addLine("			$this->view->error = $form->getMessages();")
 		self.addLine("		}")
 		self.addLine("	}")
 		self.addLine("")
@@ -69,7 +73,7 @@ class ControllerFile(ABMFile):
 		self.addLine("		$id = $this->_getParam('id', '');")
 		self.addLine("		$" + MinCLASSNAME + " = $this->_model->fetchById($id);")
 		self.addLine("		if ($" + MinCLASSNAME + ") {")
-		self.addLine("			$this->view->" + MinCLASSNAME + " = $" + MinCLASSNAME + "->toArray();")
+		self.addLine("			$this->view->" + to_snake_case(MinCLASSNAME) + " = $" + MinCLASSNAME + "->toArray();")
 		self.addLine("		} else {")
 		self.addLine("			$this->getResponse()->setHttpResponseCode(404);")
 		self.addLine("		}")
@@ -78,9 +82,9 @@ class ControllerFile(ABMFile):
 		self.addLine("  public function postAction() {")
 		self.addLine("		$form = new Application_Form_" + MayCLASSNAME + "Edit();")
 		self.addLine("		if ($form->isValid($this->_getAllParams())) {")
-		self.addLine("			$this->view->" + MinCLASSNAME + " = $this->_model->insert($form->getValues())->toArray();")
+		self.addLine("			$this->view->" + to_snake_case(MinCLASSNAME) + " = $this->_model->insert($form->getValues())->toArray();")
 		self.addLine("		} else {")
-		self.addLine("			$this->view->error = $form->getErrorMessages();")
+		self.addLine("			$this->view->error = $form->getMessages();")
 		self.addLine("			$this->getResponse()->setHttpResponseCode(503);")
 		self.addLine("		}")
 		self.addLine("	}")
@@ -88,10 +92,10 @@ class ControllerFile(ABMFile):
 		self.addLine("	public function putAction() {")
 		self.addLine("		$form = new Application_Form_" + MayCLASSNAME + "Edit();")
 		self.addLine("		if ($form->isValid($this->_getAllParams())) {")
-		self.addLine("	  	$this->view->" + MinCLASSNAME + " = $this->_model->update($form->getValues())->toArray();")
+		self.addLine("	  	$this->view->" + to_snake_case(MinCLASSNAME) + " = $this->_model->update($form->getValues())->toArray();")
 		self.addLine("		} else {")
 		self.addLine("			$this->getResponse()->setHttpResponseCode(503);")
-		self.addLine("			$this->view->error = $form->getErrorMessages();")
+		self.addLine("			$this->view->error = $form->getMessages();")
 		self.addLine("		}")
 		self.addLine("	}")
 		self.addLine("")
@@ -199,6 +203,7 @@ class FormEditFile(ABMFile):
 
 	def defineVariables(self):
 		for key in self.table.keys():
+			code += """ """
 			self.addLine("		$this->" + key + " = new Zend_Form_Element_Text('" + key + "');")
 			self.addLine("		$this->" + key + "->setLabel('" + first_to_uppercase(key) + "');")
 			self.addLine("		$this->addElement($this->" + key + ");")
@@ -223,7 +228,7 @@ class DBTableFile(ABMFile):
 		self.addLine("}")
 
 	def generateTable(self):
-		self.addLine("create table " + first_to_lowercase(self.plural_name) + " (")
+		self.addLine("create table " + to_snake_case(self.plural_name) + " (")
 		for key in self.table.keys():
 			self.addLine("	" + key + " " + self.table[key] + ",")
 		self.addLine("	primary key (id)")
@@ -253,7 +258,7 @@ class ServiceFile(ABMFile):
 		self.addLine("	 */")
 		self.addLine("	speakersFrontApp.factory('" + MinPLURALNAME + "Service', function(dbConnectedService, api2URL) {")
 		self.addLine("		var instance = {")
-		self.addLine("			serviceName: '" + MinPLURALNAME + "',")
+		self.addLine("			serviceName: '" + to_res(self.plural_name) + "',")
 		self.addLine("			uriToPut: function(" + MinCLASSNAME + ") {")
 		self.addLine("				return this.serviceName + '/' + " + MinCLASSNAME + ".id;")
 		self.addLine("			},")
@@ -288,17 +293,17 @@ class EditControllerFile(ABMFile):
 		self.addLine("	speakersFrontApp.controller('" + MayPLURALNAME + "EditCtrl', function ($scope, " + MinPLURALNAME + "Service, data) {")
 		self.addLine("		/* Controller definitions */")
 		self.addLine("		$scope.data = {")
-		self.addLine("			" + MinCLASSNAME + " : data." + MinCLASSNAME + ",")
-		self.addLine("			isNew: !('id' in data." + MinCLASSNAME + ")")
+		self.addLine("			" + MinCLASSNAME + " : data." + to_snake_case(self.class_name) + ",")
+		self.addLine("			isNew: !('id' in data." + to_snake_case(self.class_name) + ")")
 		self.addLine("		};")
 		self.addLine("")
 		self.addLine("		$scope.backToList = function(){")
-		self.addLine("			window.location = '#/" + MinPLURALNAME + "';")
+		self.addLine("			window.location = '#/" + MinPLURALNAME.lower() + "';")
 		self.addLine("		};")
 		self.addLine("")
 		self.addLine("		$scope.save" + self.class_name + " = function(){")
 		self.addLine("			" + MinPLURALNAME + "Service.save($scope.data." + MinCLASSNAME + ", $scope.data.isNew).then(function(){")
-		self.addLine("				window.location = '#/" + MinPLURALNAME + "';")
+		self.addLine("				window.location = '#/" + MinPLURALNAME.lower() + "';")
 		self.addLine("			});")
 		self.addLine("		};")
 		self.addLine("	});")
@@ -308,7 +313,7 @@ class EditControllerFile(ABMFile):
 		self.addLine("			if ($route.current.params.id && $route.current.params.id.length > 0) {")
 		self.addLine("				return " + MinPLURALNAME + "Service.fetchOne($route.current.params.id);")
 		self.addLine("			} else {")
-		self.addLine("				return { " + MinCLASSNAME + ": { } };")
+		self.addLine("				return { " + to_snake_case(self.class_name) + ": { } };")
 		self.addLine("			}")
 		self.addLine("		}")
 		self.addLine("	};")
@@ -341,7 +346,7 @@ class ListControllerFile(ABMFile):
 		self.addLine("			$scope : $scope,")
 		self.addLine("			currentService : " + MinPLURALNAME + "Service,")
 		self.addLine("			currentTable : " + MinPLURALNAME + "Table,")
-		self.addLine("			currentUrl : '" + MinPLURALNAME + "'")
+		self.addLine("			currentUrl : '" + MinPLURALNAME.lower() + "'")
 		self.addLine("		}));")
 		self.addLine("	});")
 		self.addLine("	")
@@ -356,7 +361,7 @@ class ListControllerFile(ABMFile):
 		self.addLine("					country_code: 'asc'")
 		self.addLine("				}")
 		self.addLine("			}, function(data) {")
-		self.addLine("				return data." + MinPLURALNAME + ";")
+		self.addLine("				return data." + to_snake_case(self.plural_name) + ";")
 		self.addLine("			}")
 		self.addLine("			);")
 		self.addLine("		}")
@@ -367,7 +372,7 @@ class ListControllerFile(ABMFile):
 class ListHtmlFile(ABMFile):
 	def __init__(self, className, pluralName, table):
 		ABMFile.__init__(self, className, pluralName, table)
-		self.path = 'frontend/app/views/' + first_to_lowercase(pluralName) + '-list.html'
+		self.path = 'frontend/app/views/' + to_res(pluralName) + '-list.html'
 
 	def generateCode(self):
 		MinCLASSNAME  = first_to_lowercase(self.class_name)
@@ -396,7 +401,7 @@ class ListHtmlFile(ABMFile):
 			self.addLine('			<div ng-bind="' + MinCLASSNAME + '.' + key + '"/>')
 			self.addLine('		</td>')
 		self.addLine('		<td style="width: 25%;">')
-		self.addLine('			<a class="btn" href="#/' + MinPLURALNAME + '/edit/{{' + MinCLASSNAME + '.id}}"><span class="glyphicon glyphicon-pencil"/></a>')
+		self.addLine('			<a class="btn" href="#/' + MinPLURALNAME.lower() + '/edit/{{' + MinCLASSNAME + '.id}}"><span class="glyphicon glyphicon-pencil"/></a>')
 		self.addLine('			<a class="btn"ng-click="deleteItem(' + MinCLASSNAME + '.id)">   <span class="glyphicon glyphicon-trash"/></a>')
 		self.addLine('		</td>')
 		self.addLine('	</tr>')
@@ -406,7 +411,7 @@ class ListHtmlFile(ABMFile):
 class EditHtmlFile(ABMFile):
 	def __init__(self, className, pluralName, table):
 		ABMFile.__init__(self, className, pluralName, table)
-		self.path = 'frontend/app/views/' + first_to_lowercase(pluralName) + '-edit.html'
+		self.path = 'frontend/app/views/' + to_res(pluralName) + '-edit.html'
 
 	def generateCode(self):
 		self.addLine('<form name="form" class="main-form">')
@@ -455,22 +460,23 @@ class ABMCreator(object):
 
 		MayPLURALNAME = self.plural_name
 		MinPLURALNAME = first_to_lowercase(self.plural_name)
+		ResPLURALNAME = to_res(self.plural_name)
 		print("")
-		print(".when('/" + MinPLURALNAME + "',{")
-		print("	 templateUrl: 'views/" + MinPLURALNAME + "-list.html',")
+		print(".when('/" + MinPLURALNAME.lower() + "',{")
+		print("	 templateUrl: 'views/" + ResPLURALNAME + "-list.html',")
 		print("	 controller : '" + MayPLURALNAME + "ListCtrl',")
 		print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "ListCtrl,")
-		print("}).when('/" + MinPLURALNAME + "/edit/:id',{")
-		print("  templateUrl: 'views/" + MinPLURALNAME + "-edit.html',")
+		print("}).when('/" + MinPLURALNAME.lower() + "/edit/:id',{")
+		print("  templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
 		print("  controller : '" + MayPLURALNAME + "EditCtrl',")
 		print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
-		print("}).when('/" + MinPLURALNAME + "/new',{")
-		print("	 templateUrl: 'views/" + MinPLURALNAME + "-edit.html',")
+		print("}).when('/" + MinPLURALNAME.lower() + "/new',{")
+		print("	 templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
 		print("  controller : '" + MayPLURALNAME + "EditCtrl',")
 		print("	 resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
 		print("})")
 		print("")
-		print('<li ng-class="getNavSidebarClassItem(' + "'/" + MinPLURALNAME + "')" + '"' + '><a ng-href="#/' + MinPLURALNAME + '">' + self.plural_name + '</a></li>')
+		print('<li ng-class="getNavSidebarClassItem(' + "'/" + MinPLURALNAME.lower() + "')" + '"' + '><a ng-href="#/' + MinPLURALNAME.lower() + '">' + self.plural_name + '</a></li>')
 		print("")
 		print('<script src="scripts/services/' + MinPLURALNAME + '.js"></script>')
 		print("")
@@ -478,41 +484,59 @@ class ABMCreator(object):
 		print("")
 		print('<script src="scripts/controllers/' + MinPLURALNAME + 'Edit.js"></script>')
 
-
 # ============================================================================================================
 
 table = {}
-table['id']    = 'integer not null auto_increment'
-table['name']  = 'varchar(50)'
-table['color'] = 'char(7)'
+table['id']     = 'integer not null auto_increment'
+table['name']   = 'varchar(50)'
+table['cityId'] = 'integer'
+table['address']= 'varchar(200)'
+table['phone']  = 'varchar(50)'
+table['fax']    = 'varchar(50)'
+table['email']  = 'varchar(50)'
+table['web']    = 'varchar(50)'
+table['mobile'] = 'varchar(100)'
 
-# table['cityId']  = 'integer'
-# table['address'] = 'varchar(200)'
-# table['phone']   = 'varchar(50)'
-# table['fax']   = 'varchar(50)'
-# table['email'] = 'varchar(50)'
-# table['web']   = 'varchar(50)'
-# table['capacity'] = 'integer'
 
-# create table venues (
+# create table car_agencies (
 # 	id integer not null auto_increment,
-# 	name varchar(50),
 # 	cityId integer,
+# 	name varchar(50),
 # 	address varchar(200),
 # 	phone varchar(50),
+# 	mobile varchar(100)
 # 	fax varchar(50),
 # 	email varchar(50),
 # 	web varchar(50),
-# 	capacity integer,
 # 	primary key (id)
 # );
 
-# create table contracts_statuses (
-# 	id integer not null auto_increment,
-# 	name varchar(50),
-# 	color char(7),
-# 	primary key (id)
-# );
+creator = ABMCreator('CarAgencie', 'CarAgencies', table)
+#creator.execute()
 
-creator = ABMCreator('ContractStatus', 'ContractsStatuses', table)
-creator.execute()
+
+# x = """    public function getAction() {
+#         $code = $this->_getParam('id', '');
+#         $MinCLASSNAME = $this->_model->fetchByCode($code);
+#         if ($MinCLASSNAME) {
+#             $this->view->MinCLASSNAME = $MinCLASSNAME->toArray();
+#         } else {
+#             $this->getResponse()->setHttpResponseCode(404);
+#         }
+#     }
+# 
+#     public function postAction() {
+#         $form = new Application_Form_MayCLASSNAMEEdit();
+#         if ($form->isValid($this->_getAllParams())) {
+#             $this->view->MinCLASSNAME = $this->_model->insert($form->getValues())->toArray();
+# 
+#         } else {
+#             $this->view->error = $form->getMessages();
+#             $this->getResponse()->setHttpResponseCode(503);
+#         }
+#     }
+# """
+# x = x.replace("MayCLASSNAME", "Currency")
+# x = x.replace("MinCLASSNAME", "currency")
+# 
+# print(x)
