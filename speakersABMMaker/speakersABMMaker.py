@@ -44,66 +44,70 @@ class ControllerFile(ABMFile):
 		self.path = 'backend/application/controllers/' + pluralName + 'Controller.php'
 
 	def generateCode(self):
-		MayCLASSNAME  = self.class_name
-		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
-		self.addLine("<?php")
-		self.addLine("")
-		self.addLine("class " + self.plural_name + "Controller extends Trinomio_Rest_Controller {")
-		self.addLine("	/**")
-		self.addLine(" 	 * @var Application_Model_" + MayCLASSNAME)
-		self.addLine(" 	 */")
-		self.addLine("	protected $_model;")
-		self.addLine("")
-		self.addLine("  public function init() {")
-		self.addLine("		$this->_model = new Application_Model_" + MayCLASSNAME + "();")
-		self.addLine("  }")
-		self.addLine("")
-		self.addLine("  public function indexAction() {")
-		self.addLine("  	$form = new Application_Form_" + MayCLASSNAME + "List();")
-		self.addLine("  	if ($form->isValid($this->_getAllParams())) {")
-		self.addLine("			$this->view->" + to_snake_case(MinPLURALNAME) + " = $this->_model->fetchByFilters($form->getValues())->toArray();")
-		self.addLine("		} else {")
-		self.addLine("			$this->getResponse()->setHttpResponseCode(503);")
-		self.addLine("			$this->view->error = $form->getMessages();")
-		self.addLine("		}")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("	public function getAction() {")
-		self.addLine("		$id = $this->_getParam('id', '');")
-		self.addLine("		$" + MinCLASSNAME + " = $this->_model->fetchById($id);")
-		self.addLine("		if ($" + MinCLASSNAME + ") {")
-		self.addLine("			$this->view->" + to_snake_case(MinCLASSNAME) + " = $" + MinCLASSNAME + "->toArray();")
-		self.addLine("		} else {")
-		self.addLine("			$this->getResponse()->setHttpResponseCode(404);")
-		self.addLine("		}")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("  public function postAction() {")
-		self.addLine("		$form = new Application_Form_" + MayCLASSNAME + "Edit();")
-		self.addLine("		if ($form->isValid($this->_getAllParams())) {")
-		self.addLine("			$this->view->" + to_snake_case(MinCLASSNAME) + " = $this->_model->insert($form->getValues())->toArray();")
-		self.addLine("		} else {")
-		self.addLine("			$this->view->error = $form->getMessages();")
-		self.addLine("			$this->getResponse()->setHttpResponseCode(503);")
-		self.addLine("		}")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("	public function putAction() {")
-		self.addLine("		$form = new Application_Form_" + MayCLASSNAME + "Edit();")
-		self.addLine("		if ($form->isValid($this->_getAllParams())) {")
-		self.addLine("	  	$this->view->" + to_snake_case(MinCLASSNAME) + " = $this->_model->update($form->getValues())->toArray();")
-		self.addLine("		} else {")
-		self.addLine("			$this->getResponse()->setHttpResponseCode(503);")
-		self.addLine("			$this->view->error = $form->getMessages();")
-		self.addLine("		}")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("	public function deleteAction() {")
-		self.addLine("		$id = $this->_getParam('id', 0);")
-		self.addLine("		$this->view->affectedRows = $this->_model->delete($id);")
-		self.addLine("	}")
-		self.addLine("}")
+		code = """<?php
+
+class MayPLURALNAMEController extends Trinomio_Rest_Controller {
+	/**
+ 	 * @var Application_Model_MayCLASSNAME
+ 	 */
+	protected $_model;
+
+  public function init() {
+		$this->_model = new Application_Model_MayCLASSNAME();
+  }
+
+  public function indexAction() {
+  	$form = new Application_Form_MayCLASSNAMEList();
+  	if ($form->isValid($this->_getAllParams())) {
+			$this->view->SnakePLURALNAME = $this->_model->fetchByFilters($form->getValues())->toArray();
+		} else {
+			$this->getResponse()->setHttpResponseCode(503);
+			$this->view->error = $form->getMessages();
+		}
+	}
+
+	public function getAction() {
+		$id = $this->_getParam('id', '');
+		$MinCLASSNAME = $this->_model->fetchById($id);
+		if ($MinCLASSNAME) {
+			$this->view->SnakeCLASSNAME = $MinCLASSNAME->toArray();
+		} else {
+			$this->getResponse()->setHttpResponseCode(404);
+		}
+	}
+
+  public function postAction() {
+		$form = new Application_Form_MayCLASSNAMEEdit();
+		if ($form->isValid($this->_getAllParams())) {
+			$this->view->SnakeCLASSNAME = $this->_model->insert($form->getValues())->toArray();
+		} else {
+			$this->view->error = $form->getMessages();
+			$this->getResponse()->setHttpResponseCode(503);
+		}
+	}
+
+	public function putAction() {
+		$form = new Application_Form_MayCLASSNAMEEdit();
+		if ($form->isValid($this->_getAllParams())) {
+	  	$this->view->SnakeCLASSNAME = $this->_model->update($form->getValues())->toArray();
+		} else {
+			$this->getResponse()->setHttpResponseCode(503);
+			$this->view->error = $form->getMessages();
+		}
+	}
+
+	public function deleteAction() {
+		$id = $this->_getParam('id', 0);
+		$this->view->affectedRows = $this->_model->delete($id);
+	}
+}"""
+		code = code.replace("MayCLASSNAME", self.class_name)
+		code = code.replace("MinCLASSNAME", first_to_lowercase(self.class_name))
+		code = code.replace("SnakeCLASSNAME", to_snake_case(self.class_name))
+		code = code.replace("MayPLURALNAME", self.plural_name)
+		code = code.replace("MinPLURALNAME", first_to_lowercase(self.plural_name))
+		code = code.replace("SnakePLURALNAME",to_snake_case(self.plural_name))
+		self.code = code
 
 # ============================================================================================================
 class ModelFile(ABMFile):
@@ -450,11 +454,11 @@ class ABMCreator(object):
 
 	def initialize(self):
 		# Backend
-		self.files.append(ModelFile(self.class_name, self.plural_name))
+		#self.files.append(ModelFile(self.class_name, self.plural_name))
 		#self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
 		#self.files.append(FormListFile(self.class_name, self.plural_name))
 		#self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
-		#self.files.append(ControllerFile(self.class_name, self.plural_name))
+		self.files.append(ControllerFile(self.class_name, self.plural_name))
 		# Frontend
 		# self.files.append(ServiceFile(self.class_name, self.plural_name))
 		# self.files.append(EditControllerFile(self.class_name, self.plural_name))
