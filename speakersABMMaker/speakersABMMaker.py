@@ -112,42 +112,44 @@ class ModelFile(ABMFile):
 		self.path = 'backend/application/models/' + className + '.php'
 
 	def generateCode(self):
-		MayCLASSNAME  = self.class_name
-		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		self.addLine("<?php")
-		self.addLine("")
-		self.addLine("class Application_Model_" + MayCLASSNAME + " {")
-		self.addLine("	/**")
-		self.addLine(" 	 * @var Application_Model_DbTable_" + MayCLASSNAME)
-		self.addLine(" 	 */")
-		self.addLine("	private $_dbTable;")
-		self.addLine("")
-		self.addLine("	public function __construct() {")
-		self.addLine("		$this->_dbTable = new Application_Model_DbTable_" + MayCLASSNAME + "();")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("	public function fetchByFilters(array $form) {")
-		self.addLine("		return $this->_dbTable->fetchAll();")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("	public function fetchById($id) {")
-		self.addLine("		return $this->_dbTable->fetchRow(array('id = ?' => $id));")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("	public function insert(array $data) {")
-		self.addLine("		$" + MinCLASSNAME + "Id = $this->_dbTable->insert($data);")
-		self.addLine("		return $this->fetchById($" + MinCLASSNAME + "Id);")
-		self.addLine(" }")
-		self.addLine("")
-		self.addLine("	public function update(array $data) {")
-		self.addLine("		$this->_dbTable->update($data, array('id = ?' => $data['id']));")
-		self.addLine("		return $this->fetchById($data['id']);")
-		self.addLine("	}")
-		self.addLine("")
-		self.addLine("	public function delete($id) {")
-		self.addLine("		return $this->_dbTable->delete(array('id = ?' => $id));")
-		self.addLine("	}")
-		self.addLine("}")
+		code = """<?php
+		
+class Application_Model_MayCLASSNAME {
+	/**
+ 	 * @var Application_Model_DbTable_MayCLASSNAME
+ 	 */
+	private $_dbTable;
+
+	public function __construct() {
+		$this->_dbTable = new Application_Model_DbTable_MayCLASSNAME();
+	}
+
+	public function fetchByFilters(array $form) {
+		return $this->_dbTable->fetchAll();
+	}
+
+	public function fetchById($id) {
+		return $this->_dbTable->fetchRow(array('id = ?' => $id));
+	}
+
+	public function insert(array $data) {
+		$MinCLASSNAMEId = $this->_dbTable->insert($data);
+		return $this->fetchById($MinCLASSNAMEId);
+ }
+
+	public function update(array $data) {
+		$this->_dbTable->update($data, array('id = ?' => $data['id']));
+		return $this->fetchById($data['id']);
+	}
+
+	public function delete($id) {
+		return $this->_dbTable->delete(array('id = ?' => $id));
+	}
+}"""
+		code = code.replace("MayCLASSNAME", self.class_name)
+		code = code.replace("MinCLASSNAME", first_to_lowercase(self.class_name))
+		self.code = code
+
 
 # ============================================================================================================
 class FormListFile(ABMFile):
@@ -448,11 +450,11 @@ class ABMCreator(object):
 
 	def initialize(self):
 		# Backend
-		#self.files.append(ModelFile(self.class_name, self.plural_name))
+		self.files.append(ModelFile(self.class_name, self.plural_name))
 		#self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
 		#self.files.append(FormListFile(self.class_name, self.plural_name))
-		self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
-		self.files.append(ControllerFile(self.class_name, self.plural_name))
+		#self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
+		#self.files.append(ControllerFile(self.class_name, self.plural_name))
 		# Frontend
 		# self.files.append(ServiceFile(self.class_name, self.plural_name))
 		# self.files.append(EditControllerFile(self.class_name, self.plural_name))
@@ -520,30 +522,3 @@ table['mobile'] = 'varchar(100)'
 
 creator = ABMCreator('CarAgencie', 'CarAgencies', table)
 creator.execute()
-
-
-# x = """    public function getAction() {
-#         $code = $this->_getParam('id', '');
-#         $MinCLASSNAME = $this->_model->fetchByCode($code);
-#         if ($MinCLASSNAME) {
-#             $this->view->MinCLASSNAME = $MinCLASSNAME->toArray();
-#         } else {
-#             $this->getResponse()->setHttpResponseCode(404);
-#         }
-#     }
-# 
-#     public function postAction() {
-#         $form = new Application_Form_MayCLASSNAMEEdit();
-#         if ($form->isValid($this->_getAllParams())) {
-#             $this->view->MinCLASSNAME = $this->_model->insert($form->getValues())->toArray();
-# 
-#         } else {
-#             $this->view->error = $form->getMessages();
-#             $this->getResponse()->setHttpResponseCode(503);
-#         }
-#     }
-# """
-# x = x.replace("MayCLASSNAME", "Currency")
-# x = x.replace("MinCLASSNAME", "currency")
-# 
-# print(x)
