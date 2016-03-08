@@ -60,6 +60,7 @@ class MayPLURALNAMEController extends Trinomio_Rest_Controller {
   	$form = new Application_Form_MayCLASSNAMEList();
   	if ($form->isValid($this->_getAllParams())) {
 			$this->view->SnakePLURALNAME = $this->_model->fetchByFilters($form->getValues())->toArray();
+			$this->view->total_items = $this->_model->fetchCountByFilters($form->getValues());
 		} else {
 			$this->getResponse()->setHttpResponseCode(503);
 			$this->view->error = $form->getMessages();
@@ -129,8 +130,13 @@ class Application_Model_MayCLASSNAME {
 	}
 
 	public function fetchByFilters(array $form) {
-		return $this->_dbTable->fetchAll();
+		return $this->_dbTable->fetchAll(null, "{$form['sort']} {$form['sortOrder']}", 
+			$form['pageSize'], $form['pageSize'] * ($form['page'] - 1));
 	}
+
+  public function fetchCountByFilters(array $form) {
+    return $this->_dbTable->fetchCount(null);
+  }
 
 	public function fetchById($id) {
 		return $this->_dbTable->fetchRow(array('id = ?' => $id));
@@ -162,23 +168,56 @@ class FormListFile(ABMFile):
 		self.path = 'backend/application/forms/' + className + 'List.php'
 
 	def generateCode(self):
-		table_name = first_to_lowercase(self.plural_name)
-		self.addLine("<?php")
-		self.addLine("")
-		self.addLine("class Application_Form_" + self.class_name + "List extends Zend_Form {")
-		self.addLine("")
-		self.addLine("	/**")
-		self.addLine(" 	 * @var Zend_Form_Element_Xhtml")
-		self.addLine(" 	 */")
-		self.addLine("	public $like;")
-		self.addLine("")
-		self.addLine("	public function init() {")
-		self.addLine("		$this->setName('" + self.class_name + "List')->setMethod('get');")
-		self.addLine("		$this->like = new Zend_Form_Element_Text('like');")
-		self.addLine("		$this->like->setLabel('like');")
-		self.addLine("		$this->addElement($this->like);")
-		self.addLine("	}")
-		self.addLine("}")
+		code = """<?php
+		
+class Application_Form_MayCLASSNAMEList extends Zend_Form {
+
+	/**
+ 	 * @var Zend_Form_Element_Xhtml
+ 	 */
+	public $like;
+	/**
+	 * @var Zend_Form_Element_Xhtml
+	 */
+	public $page;
+	/**
+	 * @var Zend_Form_Element_Xhtml
+	 */
+	public $pageSize;
+	/**
+	 * @var Zend_Form_Element_Xhtml
+	 */
+	public $sort;
+	/**
+	 * @var Zend_Form_Element_Xhtml
+	 */
+	public $sortOrder;
+
+	public function init() {
+		$this->setName('MayCLASSNAMEList')->setMethod('get');
+		$this->like = new Zend_Form_Element_Text('like');
+		$this->like->setLabel('like');
+		$this->addElement($this->like);
+
+    $this->page = new Zend_Form_Element_Text('page');
+    $this->page->setLabel('page');
+    $this->addElement($this->page);
+
+    $this->pageSize = new Zend_Form_Element_Text('pageSize');
+    $this->pageSize->setLabel('pageSize');
+    $this->addElement($this->pageSize);
+
+    $this->sort = new Zend_Form_Element_Text('sort');
+    $this->sort->setLabel('sort');
+    $this->addElement($this->sort);
+
+    $this->sortOrder = new Zend_Form_Element_Text('sortOrder');
+    $this->sortOrder->setLabel('sortOrder');
+    $this->addElement($this->sortOrder);
+	}
+}"""
+		code = code.replace("MayCLASSNAME", self.class_name)
+		self.code = code
 
 # ============================================================================================================
 class FormEditFile(ABMFile):
@@ -229,16 +268,18 @@ class DBTableFile(ABMFile):
 		self.path = 'backend/application/models/DbTable/' + className + '.php'
 
 	def generateCode(self):
-		self.addLine("<?php")
-		self.addLine("")
-		self.addLine("/**")
+		self.code += "<?php\n\n/**"
 		self.generateTable()
-		self.addLine("*/")
-		self.addLine("class Application_Model_DbTable_" + self.class_name + " extends Zend_Db_Table_Abstract {")
-		self.addLine("")
-		self.addLine("	protected $_name = '"+ to_snake_case(self.plural_name) + "';")
-		self.addLine("")
-		self.addLine("}")
+		code = """
+*/
+class Application_Model_DbTable_MayCLASSNAME extends Trinomio_DbTable_Abstract {
+
+	protected $_name = 'SnakePLURALNAME';
+
+}"""
+		code = code.replace("MayCLASSNAME", self.class_name)
+		code = code.replace("SnakePLURALNAME",to_snake_case(self.plural_name))
+		self.code += code
 
 	def generateTable(self):
 		self.addLine("create table " + to_snake_case(self.plural_name) + " (")
@@ -288,49 +329,57 @@ class EditControllerFile(ABMFile):
 		self.path = 'frontend/app/scripts/controllers/' + first_to_lowercase(pluralName) + 'Edit.js'
 
 	def generateCode(self):
-		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		MayPLURALNAME = self.plural_name
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
-		self.addLine("var speakersFrontApp = angular.module('speakersFrontApp');")
-		self.addLine("")
-		self.addLine("(function() {")
-		self.addLine("	'use strict';")
-		self.addLine("")
-		self.addLine("	/**")
-		self.addLine("	 * @ngdoc function")
-		self.addLine("	 * @name speakersFrontApp.controller:" + MayPLURALNAME + "EditCtrl")
-		self.addLine("	 * @description")
-		self.addLine("	 * # " + MayPLURALNAME + "EditCtrl")
-		self.addLine("	 * Controller of the speakersFrontApp")
-		self.addLine("		*/")
-		self.addLine("	speakersFrontApp.controller('" + MayPLURALNAME + "EditCtrl', function ($scope, " + MinPLURALNAME + "Service, data) {")
-		self.addLine("		/* Controller definitions */")
-		self.addLine("		$scope.data = {")
-		self.addLine("			" + MinCLASSNAME + " : data." + to_snake_case(self.class_name) + ",")
-		self.addLine("			isNew: !('id' in data." + to_snake_case(self.class_name) + ")")
-		self.addLine("		};")
-		self.addLine("")
-		self.addLine("		$scope.backToList = function(){")
-		self.addLine("			window.location = '#/" + MinPLURALNAME.lower() + "';")
-		self.addLine("		};")
-		self.addLine("")
-		self.addLine("		$scope.save" + self.class_name + " = function(){")
-		self.addLine("			" + MinPLURALNAME + "Service.save($scope.data." + MinCLASSNAME + ", $scope.data.isNew).then(function(){")
-		self.addLine("				window.location = '#/" + MinPLURALNAME.lower() + "';")
-		self.addLine("			});")
-		self.addLine("		};")
-		self.addLine("	});")
-		self.addLine("	")
-		self.addLine("	speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl = {")
-		self.addLine("		data: function($route, " + MinPLURALNAME + "Service) {")
-		self.addLine("			if ($route.current.params.id && $route.current.params.id.length > 0) {")
-		self.addLine("				return " + MinPLURALNAME + "Service.fetchOne($route.current.params.id);")
-		self.addLine("			} else {")
-		self.addLine("				return { " + to_snake_case(self.class_name) + ": { } };")
-		self.addLine("			}")
-		self.addLine("		}")
-		self.addLine("	};")
-		self.addLine("})();")
+		code = """var speakersFrontApp = angular.module('speakersFrontApp');
+
+(function() {
+
+	'use strict';
+
+	/**
+	 * @ngdoc function
+	 * @name speakersFrontApp.controller:MayPLURALNAMEEditCtrl
+	 * @description
+	 * # MayPLURALNAMEEditCtrl
+	 * Controller of the speakersFrontApp
+	*/
+	speakersFrontApp.controller('MayPLURALNAMEEditCtrl', function ($scope, MinPLURALNAMEService, data) {
+		/* Controller definitions */
+		$scope.data = {
+			MinCLASSNAME : data.SnakeCLASSNAME,
+			isNew: !('id' in data.SnakeCLASSNAME)
+		};
+
+		$scope.backToList = function(){
+			window.location = '#/MinTotalPLURALNAME';
+		};
+
+		$scope.saveMayCLASSNAME = function(form){
+			if (form.$valid) {
+				MinPLURALNAMEService.save($scope.data.MinCLASSNAME, $scope.data.isNew).then(function(){
+					window.location = '#/MinTotalPLURALNAME';
+				});
+			}
+		};
+	});
+	
+	speakersFrontApp.resolveMayPLURALNAMEEditCtrl = {
+		data: function($route, MinPLURALNAMEService) {
+			if ($route.current.params.id && $route.current.params.id.length > 0) {
+				return MinPLURALNAMEService.fetchOne($route.current.params.id);
+			} else {
+				return { SnakeCLASSNAME: { } };
+			}
+		}
+	};
+})();"""
+		code = code.replace('MayCLASSNAME' , self.class_name)
+		code = code.replace('MinCLASSNAME' , first_to_lowercase(self.class_name))
+		code = code.replace('MayPLURALNAME' , self.plural_name)
+		code = code.replace('MinPLURALNAME' , first_to_lowercase(self.plural_name))
+		code = code.replace('SnakeCLASSNAME' , to_snake_case(self.class_name))
+		code = code.replace('MinTotalPLURALNAME' , self.plural_name.lower())
+		self.code = code
+
 
 # ============================================================================================================
 class ListControllerFile(ABMFile):
@@ -339,47 +388,59 @@ class ListControllerFile(ABMFile):
 		self.path = 'frontend/app/scripts/controllers/' + first_to_lowercase(pluralName) + 'List.js'
 
 	def generateCode(self):
-		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		MayPLURALNAME = self.plural_name
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
-		self.addLine("var speakersFrontApp = angular.module('speakersFrontApp');")
-		self.addLine("(function() {")
-		self.addLine("")
-		self.addLine("	'use strict';")
-		self.addLine("")
-		self.addLine("	/**")
-		self.addLine("	 * @ngdoc function")
-		self.addLine("	 * @name speakersFrontApp.controller:" + MayPLURALNAME + "ListCtrl")
-		self.addLine("	 * @description")
-		self.addLine("	 * # " + MayPLURALNAME + "ListCtrl")
-		self.addLine("	 * Controller of the speakersFrontApp")
-		self.addLine("	 */")
-		self.addLine("	speakersFrontApp.controller('" + MayPLURALNAME + "ListCtrl', function ($scope, $controller, " + MinPLURALNAME + "Service, " + MinPLURALNAME + "Table) {")
-		self.addLine("		angular.extend(this, $controller('AbstractDbConnectedCtrl', { ")
-		self.addLine("			$scope : $scope,")
-		self.addLine("			currentService : " + MinPLURALNAME + "Service,")
-		self.addLine("			currentTable : " + MinPLURALNAME + "Table,")
-		self.addLine("			currentUrl : '" + MinPLURALNAME.lower() + "'")
-		self.addLine("		}));")
-		self.addLine("	});")
-		self.addLine("	")
-		self.addLine("	speakersFrontApp.resolve" + MayPLURALNAME + "ListCtrl = {")
-		self.addLine("		" + MinPLURALNAME + "Table: function($q, ngTableParams, " + MinPLURALNAME + "Service, tableService) {")
-		self.addLine("			return tableService.createNgTableResolve($q, ngTableParams, function(count, page, sorting) {")
-		self.addLine("				return " + MinPLURALNAME + "Service.fetchAll(count, page, sorting);")
-		self.addLine("			}, {")
-		self.addLine("				page: 1,")
-		self.addLine("				count: 10,")
-		self.addLine("				sorting: {")
-		self.addLine("					country_code: 'asc'")
-		self.addLine("				}")
-		self.addLine("			}, function(data) {")
-		self.addLine("				return data." + to_snake_case(self.plural_name) + ";")
-		self.addLine("			}")
-		self.addLine("			);")
-		self.addLine("		}")
-		self.addLine("	};")
-		self.addLine("})();")
+		code = """var speakersFrontApp = angular.module('speakersFrontApp');
+
+(function() {
+
+	'use strict';
+
+	/**
+	 * @ngdoc function
+	 * @name speakersFrontApp.controller:MayPLURALNAMEListCtrl
+	 * @description
+	 * # MayPLURALNAMEListCtrl
+	 * Controller of the speakersFrontApp
+	 */
+	speakersFrontApp.controller('MayPLURALNAMEListCtrl', function ($scope, $controller, MinPLURALNAMEService, MinPLURALNAMETable) {
+		angular.extend(this, $controller('AbstractDbConnectedCtrl', { 
+			$scope : $scope,
+			currentService : MinPLURALNAMEService,
+			currentTable : MinPLURALNAMETable,
+			currentUrl : 'MinTotalPLURALNAME',
+			deleteResolve: {
+        title: function() {
+          return 'Delete MayCLASSNAME';
+        },
+        message: function() {
+          return 'Are you sure you want delete this MayCLASSNAME?'
+        }
+      }
+		}));
+	});
+	
+	speakersFrontApp.resolveMayPLURALNAMEListCtrl = {
+		MinPLURALNAMETable: function($q, ngTableParams, MinPLURALNAMEService, tableService) {
+			return tableService.createNgTableResolve($q, ngTableParams, function(count, page, sorting) {
+				return MinPLURALNAMEService.fetchAll(count, page, sorting);
+			}, {
+				page: 1,
+				count: 10,
+				sorting: {
+					id: 'asc'
+				}
+			}, function(data) {
+				return data.SnakePLURALNAME;
+			}
+			);
+		}
+	};
+})();"""
+		code = code.replace('MayCLASSNAME', self.class_name)
+		code = code.replace('MayPLURALNAME', self.plural_name)
+		code = code.replace('MinPLURALNAME', first_to_lowercase(self.plural_name))
+		code = code.replace('MinTotalPLURALNAME', self.plural_name.lower())
+		code = code.replace('SnakePLURALNAME', to_snake_case(self.plural_name))
+		self.code = code
 
 # ============================================================================================================
 class ListHtmlFile(ABMFile):
@@ -427,10 +488,10 @@ class EditHtmlFile(ABMFile):
 		self.path = 'frontend/app/views/' + to_res(pluralName) + '-edit.html'
 
 	def generateCode(self):
-		self.addLine('<form name="form" class="main-form">')
+		self.addLine('<form name="form" class="main-form" novalidate ng-submit="save' + self.class_name + '(form)">')
 		self.generateFields()
-		self.addLine('	<button class="btn btn-primary" ng-click="save' + self.class_name + '()"> Save ' + self.class_name + ' </button>')
-		self.addLine('	<button class="btn btn-default" ng-click="backToList()"> Back to List </button>')
+		self.addLine('	<button type="submit" class="btn btn-primary"> Save ' + self.class_name + ' </button>')
+		self.addLine('	<button type="button" class="btn btn-default" ng-click="backToList()"> Back to List </button>')
 		self.addLine('</form>')
 
 	def generateFields(self):
@@ -438,9 +499,18 @@ class EditHtmlFile(ABMFile):
 		MinPLURALNAME = first_to_lowercase(self.plural_name)
 		for key in self.table.keys():
 			if key != 'id':
+				fiel_type  = self.table[key]
+				input_text = '		<input type="text" name="' + key + '" class="form-control" ng-model="data.' + MinCLASSNAME + '.' + key + '" placeholder="' + self.class_name + ' ' + first_to_uppercase(key) + '"'
+				
+				if contains('varchar', fiel_type):
+					input_text += ' required maxlength="' + get_number(fiel_type) + '" />'
+				else:
+					input_text += ' />'
+
 				self.addLine('	<div class="form-group">')
 				self.addLine('		<label> ' + self.class_name + ' ' + first_to_uppercase(key) + ' </label>')
-				self.addLine('		<input type="text" class="form-control" ng-model="data.' + MinCLASSNAME + '.' + key + '" placeholder="' + self.class_name + ' ' + first_to_uppercase(key) + '"/>')
+				self.addLine(input_text)
+				self.addLine('		<span class="error-message" ng-show="form.$submitted && form.' + key + '.$error.required">This field is required</span>')
 				self.addLine('	</div>')
 
 # ============================================================================================================
@@ -454,75 +524,122 @@ class ABMCreator(object):
 
 	def initialize(self):
 		# Backend
-		#self.files.append(ModelFile(self.class_name, self.plural_name))
-		#self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
-		#self.files.append(FormListFile(self.class_name, self.plural_name))
-		#self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
+		self.files.append(ModelFile(self.class_name, self.plural_name))
+		self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
+		self.files.append(FormListFile(self.class_name, self.plural_name))
+		self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
 		self.files.append(ControllerFile(self.class_name, self.plural_name))
 		# Frontend
-		# self.files.append(ServiceFile(self.class_name, self.plural_name))
-		# self.files.append(EditControllerFile(self.class_name, self.plural_name))
-		# self.files.append(ListControllerFile(self.class_name, self.plural_name))
-		# self.files.append(ListHtmlFile(self.class_name, self.plural_name, self.table))
-		# self.files.append(EditHtmlFile(self.class_name, self.plural_name, self.table))
+		self.files.append(ServiceFile(self.class_name, self.plural_name))
+		self.files.append(EditControllerFile(self.class_name, self.plural_name))
+		self.files.append(ListControllerFile(self.class_name, self.plural_name))
+		self.files.append(ListHtmlFile(self.class_name, self.plural_name, self.table))
+		self.files.append(EditHtmlFile(self.class_name, self.plural_name, self.table))
 
 	def execute(self):
 		for abm_file in self.files:
-			abm_file.execute()
+			# abm_file.execute()
 			print("generated " + abm_file.path)
 
 		MayPLURALNAME = self.plural_name
 		MinPLURALNAME = first_to_lowercase(self.plural_name)
 		ResPLURALNAME = to_res(self.plural_name)
-		print("")
-		print(".when('/" + MinPLURALNAME.lower() + "',{")
-		print("	 templateUrl: 'views/" + ResPLURALNAME + "-list.html',")
-		print("	 controller : '" + MayPLURALNAME + "ListCtrl',")
-		print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "ListCtrl,")
-		print("}).when('/" + MinPLURALNAME.lower() + "/edit/:id',{")
-		print("  templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
-		print("  controller : '" + MayPLURALNAME + "EditCtrl',")
-		print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
-		print("}).when('/" + MinPLURALNAME.lower() + "/new',{")
-		print("	 templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
-		print("  controller : '" + MayPLURALNAME + "EditCtrl',")
-		print("	 resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
-		print("})")
-		print("")
-		print('<li ng-class="getNavSidebarClassItem(' + "'/" + MinPLURALNAME.lower() + "')" + '"' + '><a ng-href="#/' + MinPLURALNAME.lower() + '">' + self.plural_name + '</a></li>')
-		print("")
-		print('<script src="scripts/services/' + MinPLURALNAME + '.js"></script>')
-		print("")
-		print('<script src="scripts/controllers/' + MinPLURALNAME + 'List.js"></script>')
-		print("")
-		print('<script src="scripts/controllers/' + MinPLURALNAME + 'Edit.js"></script>')
+		# print("")
+		# print(".when('/" + MinPLURALNAME.lower() + "',{")
+		# print("	 templateUrl: 'views/" + ResPLURALNAME + "-list.html',")
+		# print("	 controller : '" + MayPLURALNAME + "ListCtrl',")
+		# print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "ListCtrl,")
+		# print("}).when('/" + MinPLURALNAME.lower() + "/edit/:id',{")
+		# print("  templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
+		# print("  controller : '" + MayPLURALNAME + "EditCtrl',")
+		# print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
+		# print("}).when('/" + MinPLURALNAME.lower() + "/new',{")
+		# print("	 templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
+		# print("  controller : '" + MayPLURALNAME + "EditCtrl',")
+		# print("	 resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
+		# print("})")
+		# print("")
+		# print('<li ng-class="getNavSidebarClassItem(' + "'/" + MinPLURALNAME.lower() + "')" + '"' + '><a ng-href="#/' + MinPLURALNAME.lower() + '">' + self.plural_name + '</a></li>')
+		# print("")
+		# print('<script src="scripts/services/' + MinPLURALNAME + '.js"></script>')
+		# print("")
+		# print('<script src="scripts/controllers/' + MinPLURALNAME + 'List.js"></script>')
+		# print("")
+		# print('<script src="scripts/controllers/' + MinPLURALNAME + 'Edit.js"></script>')
 
 # ============================================================================================================
 
-table = {}
-table['id']     = 'integer not null auto_increment'
-table['name']   = 'varchar(50)'
-table['cityId'] = 'integer'
-table['address']= 'varchar(200)'
-table['phone']  = 'varchar(50)'
-table['fax']    = 'varchar(50)'
-table['email']  = 'varchar(50)'
-table['web']    = 'varchar(50)'
-table['mobile'] = 'varchar(100)'
+car_agencies = {}
+car_agencies['id']     = 'integer not null auto_increment'
+car_agencies['name']   = 'varchar(50)'
+car_agencies['cityId'] = 'integer'
+car_agencies['address']= 'varchar(200)'
+car_agencies['phone']  = 'varchar(50)'
+car_agencies['fax']    = 'varchar(50)'
+car_agencies['email']  = 'varchar(50)'
+car_agencies['web']    = 'varchar(50)'
+car_agencies['mobile'] = 'varchar(100)'
+carAgencie = ABMCreator('CarAgencie', 'CarAgencies', car_agencies)
 
+sponsors = {}
+sponsors['id']     = 'integer not null auto_increment'
+sponsors['name']   = 'varchar(100)'
+sponsors['description'] = 'varchar(500)'
+sponsor = ABMCreator('Sponsor', 'Sponsors', sponsors)
 
-# create table car_agencies (
-# 	id integer not null auto_increment,
-# 	cityId integer,
-# 	name varchar(50),
-# 	address varchar(200),
-# 	phone varchar(50),
-# 	mobile varchar(100)
-# 	fax varchar(50),
-# 	email varchar(50),
-# 	web varchar(50),
-# 	primary key (id)
-# );
+airlines = {}
+airlines['id']     = 'integer not null auto_increment'
+airlines['name']   = 'varchar(50)'
+airline = ABMCreator('Airline', 'Airlines', airlines)
 
-creator = ABMCreator('CarAgencie', 'CarAgencies', table)
-creator.execute()
+cities = {}
+cities['id']     = 'integer not null auto_increment'
+cities['name']   = 'varchar(50)'
+cities['countryCode'] = 'varchar(3)'
+city = ABMCreator('City', 'Cities', cities)
+
+venues = {}
+venues['id']       = 'integer not null auto_increment'
+venues['name']     = 'varchar(50)'
+venues['address']  = 'varchar(200)'
+venues['phone']    = 'varchar(50)'
+venues['fax']      = 'varchar(50)'
+venues['email']    = 'varchar(50)'
+venues['web']      = 'varchar(50)'
+venues['capacity'] = 'integer'
+venues['cityId']   = 'integer'
+venue = ABMCreator('Venue', 'Venues', venues)
+
+subeventTypes = {}
+subeventTypes['id']    = 'integer not null auto_increment'
+subeventTypes['name']  = 'varchar(50)'
+subeventTypes['color'] = 'varchar(7)'
+subeventType = ABMCreator('EventSubeventType', 'EventSubeventTypes', subeventTypes)
+
+subeventFormats = {}
+subeventFormats['id']    = 'integer not null auto_increment'
+subeventFormats['name']  = 'varchar(50)'
+subeventFormats['eventItemTypeId'] = 'integer'
+subeventFormat = ABMCreator('EventSubeventFormat', 'EventSubeventFormats', subeventFormats)
+
+moderatorRoles = {}
+moderatorRoles['id']    = 'integer not null auto_increment'
+moderatorRoles['name']  = 'varchar(50)'
+moderatorRole = ABMCreator('ModeratorRole', 'ModeratorRoles', moderatorRoles)
+
+contractStatuses = {}
+contractStatuses['id']    = 'integer not null auto_increment'
+contractStatuses['name']  = 'varchar(50)'
+contractStatuses['color']  = 'varchar(7)'
+contractStatus = ABMCreator('ContractStatus', 'ContractStatuses', contractStatuses)
+
+attachmentTypes = {}
+attachmentTypes['id']    = 'integer not null auto_increment'
+attachmentTypes['name']  = 'varchar(50)'
+attachmentType = ABMCreator('AttachmentType', 'AttachmentTypes', attachmentTypes)
+
+subeventType.execute()
+subeventFormat.execute()
+moderatorRole.execute()
+contractStatus.execute()
+attachmentType.execute()
