@@ -350,13 +350,13 @@ class EditControllerFile(ABMFile):
 		};
 
 		$scope.backToList = function(){
-			window.location = '#/MinTotalPLURALNAME';
+			window.location = '#/UrlPLURALNAME';
 		};
 
 		$scope.saveMayCLASSNAME = function(form){
 			if (form.$valid) {
 				MinPLURALNAMEService.save($scope.data.MinCLASSNAME, $scope.data.isNew).then(function(){
-					window.location = '#/MinTotalPLURALNAME';
+					window.location = '#/UrlPLURALNAME';
 				});
 			}
 		};
@@ -378,6 +378,7 @@ class EditControllerFile(ABMFile):
 		code = code.replace('MinPLURALNAME' , first_to_lowercase(self.plural_name))
 		code = code.replace('SnakeCLASSNAME' , to_snake_case(self.class_name))
 		code = code.replace('MinTotalPLURALNAME' , self.plural_name.lower())
+		code = code.replace('UrlPLURALNAME' , to_res(self.plural_name))
 		self.code = code
 
 
@@ -406,7 +407,7 @@ class ListControllerFile(ABMFile):
 			$scope : $scope,
 			currentService : MinPLURALNAMEService,
 			currentTable : MinPLURALNAMETable,
-			currentUrl : 'MinTotalPLURALNAME',
+			currentUrl : 'UrlPLURALNAME',
 			deleteResolve: {
         title: function() {
           return 'Delete MayCLASSNAME';
@@ -438,7 +439,7 @@ class ListControllerFile(ABMFile):
 		code = code.replace('MayCLASSNAME', self.class_name)
 		code = code.replace('MayPLURALNAME', self.plural_name)
 		code = code.replace('MinPLURALNAME', first_to_lowercase(self.plural_name))
-		code = code.replace('MinTotalPLURALNAME', self.plural_name.lower())
+		code = code.replace('UrlPLURALNAME', to_res(self.plural_name))
 		code = code.replace('SnakePLURALNAME', to_snake_case(self.plural_name))
 		self.code = code
 
@@ -452,14 +453,16 @@ class ListHtmlFile(ABMFile):
 		MinCLASSNAME  = first_to_lowercase(self.class_name)
 		MayPLURALNAME = self.plural_name
 		MinPLURALNAME = first_to_lowercase(self.plural_name)
-		self.addLine('<div class="well">')
-		self.addLine('	<div class="row">')
-		self.addLine('		<div class="col-xs-6">')
+		self.addLine('<div class="row">')
+		self.addLine('  <div class="col-xs-9">')
+		self.addLine('    <h1 style="margin-top:10px">' + self.class_name.upper() + '</h1>')
+		self.addLine('	</div>')
+		self.addLine('	<div class="col-xs-3">')
+		self.addLine('		<div class="well">')
 		self.addLine('			<button type="button" class="btn btn-default" ng-click="newItem()">')
 		self.addLine('				<span class="glyphicon glyphicon-plus"></span> New ' + self.class_name)
 		self.addLine('			</button>')
 		self.addLine('		</div>')
-		self.addLine('		<div class="col-xs-6"></div>')
 		self.addLine('	</div>')
 		self.addLine('</div> ')
 		self.addLine('')
@@ -467,7 +470,7 @@ class ListHtmlFile(ABMFile):
 
 	def generateTable(self):
 		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
+		UrlPLURALNAME = to_res(self.plural_name)
 		self.addLine('<table ng-table="table" class="table table-hover">')
 		self.addLine('	<tr ng-repeat="' + MinCLASSNAME + ' in $data">')
 		for key in self.table.keys():
@@ -475,7 +478,7 @@ class ListHtmlFile(ABMFile):
 			self.addLine('			<div ng-bind="' + MinCLASSNAME + '.' + key + '"/>')
 			self.addLine('		</td>')
 		self.addLine('		<td style="width: 25%;">')
-		self.addLine('			<a class="btn" href="#/' + MinPLURALNAME.lower() + '/edit/{{' + MinCLASSNAME + '.id}}"><span class="glyphicon glyphicon-pencil"/></a>')
+		self.addLine('			<a class="btn" href="#/' + UrlPLURALNAME + '/edit/{{' + MinCLASSNAME + '.id}}"><span class="glyphicon glyphicon-pencil"/></a>')
 		self.addLine('			<a class="btn"ng-click="deleteItem(' + MinCLASSNAME + '.id)">   <span class="glyphicon glyphicon-trash"/></a>')
 		self.addLine('		</td>')
 		self.addLine('	</tr>')
@@ -488,6 +491,13 @@ class EditHtmlFile(ABMFile):
 		self.path = 'frontend/app/views/' + to_res(pluralName) + '-edit.html'
 
 	def generateCode(self):
+		self.addLine('<div class="row">')
+		self.addLine('  <div class="container">')
+		self.addLine('    <div class="col-xs-12">')
+		self.addLine('      <h1 class="center">' + self.class_name.upper() + '</h1>')
+		self.addLine('    </div>')
+		self.addLine('  </div>')
+		self.addLine('</div>')
 		self.addLine('<form name="form" class="main-form" novalidate ng-submit="save' + self.class_name + '(form)">')
 		self.generateFields()
 		self.addLine('	<button type="submit" class="btn btn-primary"> Save ' + self.class_name + ' </button>')
@@ -500,15 +510,15 @@ class EditHtmlFile(ABMFile):
 		for key in self.table.keys():
 			if key != 'id':
 				fiel_type  = self.table[key]
-				input_text = '		<input type="text" name="' + key + '" class="form-control" ng-model="data.' + MinCLASSNAME + '.' + key + '" placeholder="' + self.class_name + ' ' + first_to_uppercase(key) + '"'
+				input_text = '		<input type="text" name="' + key + '" class="form-control" ng-model="data.' + MinCLASSNAME + '.' + key + '" placeholder="' + first_to_uppercase(key) + '"'
 				
 				if contains('varchar', fiel_type):
 					input_text += ' required maxlength="' + get_number(fiel_type) + '" />'
 				else:
-					input_text += ' />'
+					input_text += ' required/>'
 
 				self.addLine('	<div class="form-group">')
-				self.addLine('		<label> ' + self.class_name + ' ' + first_to_uppercase(key) + ' </label>')
+				self.addLine('		<label> ' + first_to_uppercase(key) + ' </label>')
 				self.addLine(input_text)
 				self.addLine('		<span class="error-message" ng-show="form.$submitted && form.' + key + '.$error.required">This field is required</span>')
 				self.addLine('	</div>')
@@ -538,34 +548,35 @@ class ABMCreator(object):
 
 	def execute(self):
 		for abm_file in self.files:
-			# abm_file.execute()
+			abm_file.execute()
 			print("generated " + abm_file.path)
 
 		MayPLURALNAME = self.plural_name
 		MinPLURALNAME = first_to_lowercase(self.plural_name)
 		ResPLURALNAME = to_res(self.plural_name)
-		# print("")
-		# print(".when('/" + MinPLURALNAME.lower() + "',{")
-		# print("	 templateUrl: 'views/" + ResPLURALNAME + "-list.html',")
-		# print("	 controller : '" + MayPLURALNAME + "ListCtrl',")
-		# print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "ListCtrl,")
-		# print("}).when('/" + MinPLURALNAME.lower() + "/edit/:id',{")
-		# print("  templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
-		# print("  controller : '" + MayPLURALNAME + "EditCtrl',")
-		# print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
-		# print("}).when('/" + MinPLURALNAME.lower() + "/new',{")
-		# print("	 templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
-		# print("  controller : '" + MayPLURALNAME + "EditCtrl',")
-		# print("	 resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
-		# print("})")
-		# print("")
-		# print('<li ng-class="getNavSidebarClassItem(' + "'/" + MinPLURALNAME.lower() + "')" + '"' + '><a ng-href="#/' + MinPLURALNAME.lower() + '">' + self.plural_name + '</a></li>')
-		# print("")
-		# print('<script src="scripts/services/' + MinPLURALNAME + '.js"></script>')
-		# print("")
-		# print('<script src="scripts/controllers/' + MinPLURALNAME + 'List.js"></script>')
-		# print("")
-		# print('<script src="scripts/controllers/' + MinPLURALNAME + 'Edit.js"></script>')
+		UrlPLURALNAME = to_res(self.plural_name)
+		print("")
+		print(".when('/" + UrlPLURALNAME + "',{")
+		print("	 templateUrl: 'views/" + ResPLURALNAME + "-list.html',")
+		print("	 controller : '" + MayPLURALNAME + "ListCtrl',")
+		print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "ListCtrl,")
+		print("}).when('/" + UrlPLURALNAME + "/edit/:id',{")
+		print("  templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
+		print("  controller : '" + MayPLURALNAME + "EditCtrl',")
+		print("  resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
+		print("}).when('/" + UrlPLURALNAME + "/new',{")
+		print("	 templateUrl: 'views/" + ResPLURALNAME + "-edit.html',")
+		print("  controller : '" + MayPLURALNAME + "EditCtrl',")
+		print("	 resolve: speakersFrontApp.resolve" + MayPLURALNAME + "EditCtrl")
+		print("})")
+		print("")
+		print('<li ng-class="getNavSidebarClassItem(' + "'/" + UrlPLURALNAME + "')" + '"' + '><a ng-href="#/' + UrlPLURALNAME + '">' + self.plural_name + '</a></li>')
+		print("")
+		print('<script src="scripts/services/' + MinPLURALNAME + '.js"></script>')
+		print("")
+		print('<script src="scripts/controllers/' + MinPLURALNAME + 'List.js"></script>')
+		print("")
+		print('<script src="scripts/controllers/' + MinPLURALNAME + 'Edit.js"></script>')
 
 # ============================================================================================================
 
@@ -635,11 +646,149 @@ contractStatus = ABMCreator('ContractStatus', 'ContractStatuses', contractStatus
 
 attachmentTypes = {}
 attachmentTypes['id']    = 'integer not null auto_increment'
-attachmentTypes['name']  = 'varchar(50)'
+attachmentTypes['name']  = 'varchar(100)'
+attachmentTypes['origin'] = "enum('contracts','events','subevents','speakers')"
 attachmentType = ABMCreator('AttachmentType', 'AttachmentTypes', attachmentTypes)
 
-subeventType.execute()
-subeventFormat.execute()
-moderatorRole.execute()
-contractStatus.execute()
-attachmentType.execute()
+hotels = {}
+hotels['id']      = 'integer not null auto_increment'
+hotels['name']    = 'varchar(100)'
+hotels['cityId']  = 'integer'
+hotels['address'] = 'varchar(200)'
+hotels['phone']   = 'varchar(50)'
+hotels['mobile']  = 'varchar(50)'
+hotels['fax']     = 'varchar(50)'
+hotels['email']   = 'varchar(200)'
+hotels['web']     = 'varchar(50)'
+hotel = ABMCreator('Hotel', 'Hotels', hotels)
+
+# =========================================================================================================
+# SUBEVENT
+subevents = {}
+subevents['id']            =  'integer not null auto_increment'
+subevents['eventId']       =  'integer'
+subevents['eventTypeId']   =  'integer'
+subevents['eventFormatId'] =  'integer'
+subevents['name']          =  'varchar(50)'
+subevents['startDate']     =  'timestamp'
+subevents['endDate']       =  'timestamp'
+subevents['location']      =  'varchar(100)'
+subevents['mediaOutlet']   =  'varchar(50)'
+subevents['audienceProfile'] =  'text'
+subevents['expectedAttendees'] =  'integer'
+subevent = ABMCreator('Subevent', 'Subevents', subevents)
+
+# =========================================================================================================
+subeventAttachments = {}
+subeventAttachments['id']           =  'integer not null auto_increment'
+subeventAttachments['subeventId']   = 'integer'
+subeventAttachments['attachmentId'] = 'integer'
+subeventAttachments['onStage']      = 'bit(1)'
+subeventAttachment = ABMCreator('SubeventAttachment', 'SubeventAttachments', subeventAttachments)
+
+subeventBooks = {}
+subeventBooks['id'] = 'integer not null auto_increment'
+subeventBooks['subeventId'] = 'integer'
+subeventBooks['name'] = 'varchar(255)'
+subeventBooks['isbn'] = 'integer(13)'
+subeventBooks['genre'] = 'varchar(50)'
+subeventBook = ABMCreator('SubeventBook', 'SubeventBooks', subeventBooks)
+
+subeventContacts = {}
+subeventContacts['id'] = 'integer not null auto_increment'
+subeventContacts['subeventId'] = 'integer'
+subeventContacts['contactId']  = 'integer'
+subeventContacts['isMain']     = 'bit(1)'
+subeventContact = ABMCreator('SubeventContact', 'SubeventContacts', subeventContacts)
+
+subeventModerators = {}
+subeventModerators['id'] = 'integer not null auto_increment'
+subeventModerators['subeventId'] = 'integer'
+subeventModerators['moderatorId'] = 'integer'
+subeventModerator = ABMCreator('SubeventModerator', 'SubeventModerators', subeventModerators)
+
+subeventSpeakers = {}
+subeventSpeakers['id'] = 'integer not null auto_increment'
+subeventSpeakers['subeventId'] = 'integer'
+subeventSpeakers['speakerId']  = 'integer'
+subeventSpeaker = ABMCreator('SubeventSpeaker', 'SubeventSpeakers', subeventSpeakers)
+
+subeventSponsors = {}
+subeventSponsors['id'] = 'integer not null auto_increment'
+subeventSponsors['subeventId']   = 'integer'
+subeventSponsors['sponsorId']    = 'integer'
+subeventSponsors['expectations'] = 'text'
+subeventSponsor = ABMCreator('SubeventSponsor', 'SubeventSponsors', subeventSponsors)
+
+# subevent.execute()
+# subeventAttachment.execute()
+# subeventBook.execute()
+# subeventContact.execute()
+# subeventModerator.execute()
+# subeventSpeaker.execute()
+# subeventSponsor.execute()
+
+# =========================================================================================================
+
+speakerLogistics = {}
+speakerLogistics['id'] = 'integer not null auto_increment'
+speakerLogistics['name'] = 'varchar(255)'
+speakerLogistic = ABMCreator('SpeakerLogistics', 'SpeakerLogistics', speakerLogistics)
+speakerLogistic.execute()
+
+"""
+create table events_transfers ( 
+	id integer not null auto_increment,
+	eventId integer,
+	speakerId integer,
+	companionId integer,
+	carAgencyId integer,
+	pickupDate timestamp,
+	pickupAddress varchar(200),
+	destinationAddress varchar(200),
+	currencyCode integer,
+	price numeric(10,2),
+	description text,
+	primary key (id)
+);
+
+create table events_transfers_contacts (
+	eventTransferId integer,
+	contactId integer
+);
+
+create table events_hotel_bookings (
+  id integer not null auto_increment,
+  eventId integer,
+  hotelId integer,
+  speakerId integer,
+  eventCompanionId integer,
+  checkinDate timestamp,
+  checkoutDate timestamp,
+  roomType varchar(50),
+  currencyCode integer,
+  price numeric(10,2),
+  bookedBy enum('wobi', 'bureau', 'speaker'),
+  primary key (id)
+);
+
+create table events_flights (
+	id integer not null auto_increment,  
+	eventId integer,
+	speakerId integer,
+	airlineId integer,
+	code varchar(7),
+	class varchar(50),
+	departureDate timestamp,
+	departureAirportCode integer,
+	departureTransferId integer,
+	arrivalDate timestamp,
+	arribalAirportCode integer,
+	arrivalTransferId integer,
+	currencyCode integer,
+	price numeric(10,2),
+	backupFligths varchar(50),
+	primary key (id)
+);
+
+"""
