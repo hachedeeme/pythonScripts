@@ -732,63 +732,66 @@ subeventSponsor = ABMCreator('SubeventSponsor', 'SubeventSponsors', subeventSpon
 
 speakerLogistics = {}
 speakerLogistics['id'] = 'integer not null auto_increment'
-speakerLogistics['name'] = 'varchar(255)'
+speakerLogistics['eventId'] = 'integer'
+speakerLogistics['speakerId'] = 'integer'
+speakerLogistics['fromDate'] = 'timestamp'
+speakerLogistics['toDate'] = 'timestamp'
+speakerLogistics['currencyCode'] = 'integer'
+speakerLogistics['price'] = 'numeric(10,2)'
+speakerLogistics['type'] = "enum('transfer', 'hotel', 'flight')"
 speakerLogistic = ABMCreator('SpeakerLogistics', 'SpeakerLogistics', speakerLogistics)
 speakerLogistic.execute()
 
+
 """
-create table events_transfers ( 
+create table events_logistics
 	id integer not null auto_increment,
 	eventId integer,
 	speakerId integer,
-	companionId integer,
-	carAgencyId integer,
-	pickupDate timestamp,
-	pickupAddress varchar(200),
-	destinationAddress varchar(200),
+	fromDate timestamp,
+	toDate timestamp,
 	currencyCode integer,
 	price numeric(10,2),
+	type enum('transfer', 'hotel', 'flight'),
+	primary key (id)
+);
+
+create table events_transfers ( 
+	id integer not null,
+	eventCompanionId integer,
+	carAgencyId integer,
+	pickupAddress varchar(200),
+	destinationAddress varchar(200),
 	description text,
 	primary key (id)
 );
 
 create table events_transfers_contacts (
+	id integer not null auto_increment,
 	eventTransferId integer,
-	contactId integer
+	contactId integer,
+	primary key (id)
 );
 
 create table events_hotel_bookings (
-  id integer not null auto_increment,
-  eventId integer,
+	id integer not null,
   hotelId integer,
-  speakerId integer,
   eventCompanionId integer,
-  checkinDate timestamp,
-  checkoutDate timestamp,
   roomType varchar(50),
-  currencyCode integer,
-  price numeric(10,2),
   bookedBy enum('wobi', 'bureau', 'speaker'),
   primary key (id)
 );
 
 create table events_flights (
-	id integer not null auto_increment,  
-	eventId integer,
-	speakerId integer,
+	id integer not null,
 	airlineId integer,
 	code varchar(7),
 	class varchar(50),
-	departureDate timestamp,
 	departureAirportCode integer,
 	departureTransferId integer,
-	arrivalDate timestamp,
 	arribalAirportCode integer,
 	arrivalTransferId integer,
-	currencyCode integer,
-	price numeric(10,2),
 	backupFligths varchar(50),
 	primary key (id)
 );
-
 """
