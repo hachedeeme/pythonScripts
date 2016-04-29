@@ -524,28 +524,161 @@ class EditHtmlFile(ABMFile):
 				self.addLine('	</div>')
 
 # ============================================================================================================
+class EditHtmlBootstrapFile(ABMFile):
+	def __init__(self, className, pluralName, table):
+		ABMFile.__init__(self, className, pluralName, table)
+		self.path = 'frontend/app/views/' + to_res(pluralName) + '-edit.html'
+
+	def generateCode(self):
+		code = """<div class="row ng-scope">
+  <div class="col-xs-9">
+    <h1 style="margin-top:10px">MayCLASSNAME</h1>
+  </div>
+		<div class="col-xs-3">
+      <div class="well">
+        <div class="btn-group" uib-dropdown>
+          <button id="split-button" type="button" class="btn btn-default"
+          	ng-init="relatedRecordSelected = relatedRecordSelected || relatedRecords[0]"
+            ng-bind="relatedRecordSelected.buttonTitle" ng-click="relatedRecordSelected.add()"></button>
+          <button type="button" class="btn btn-default" uib-dropdown-toggle>
+            <span class="caret"></span>
+            <span class="sr-only">Split button!</span>
+          </button>
+          <ul uib-dropdown-menu role="menu" aria-labelledby="split-button">
+            <li role="menuitem" ng-repeat="relatedRecord in relatedRecords">
+              <a href="" ng-click="relatedRecord.add()" ng-bind="relatedRecord.buttonTitle"></a>
+            </li>
+          </ul>
+        </div>
+      </div>
+  </div>
+</div>
+"""
+		
+		self.code = code.replace('MayCLASSNAME', self.class_name.upper())
+
+		self.addLine('<form name="form" class="form form-horizontal" novalidate ng-submit="save' + self.class_name + '(form)">')
+		self.addLine('<div class="row">')
+		self.addLine('	<div class="col-md-4">')
+		self.addLine('		<h4>General</h4>')
+		self.generateFields()
+		self.addLine('	</div>')
+		self.addLine('')
+		self.addLine('	<div class="col-md-8">')
+		self.addLine('    <!-- PARAMETRIC FIELDS -->')
+		self.addLine('	</div>')
+		self.addLine('')
+		self.addLine('</div>')
+		self.addLine('<div class="row">')
+		self.addLine('	<div class="col-md-6">')
+		self.addLine('		<div class="form-group">')
+		self.addLine('			<div class="col-md-offset-3 col-md-9">')
+		self.addLine('				<button type="submit" class="btn btn-primary"> Save ' + self.class_name + ' </button>')
+		self.addLine('				<button type="button" class="btn btn-default" ng-click="backToList()"> Back to List </button>')
+		self.addLine('			</div>')
+		self.addLine('		</div>')
+		self.addLine('	</div>')
+		self.addLine('</div>')
+		self.addLine('</form>')
+
+	def generateFields(self):
+		MinCLASSNAME  = first_to_lowercase(self.class_name)
+		MinPLURALNAME = first_to_lowercase(self.plural_name)
+		for key in self.table.keys():
+			if key != 'id':
+				fiel_type  = self.table[key]
+				input_text = '				<input type="text" name="' + key + '" class="form-control" ng-model="data.' + MinCLASSNAME + '.' + key + '" placeholder="' + first_to_uppercase(key) + '"'
+				
+				if contains('varchar', fiel_type):
+					input_text += ' required maxlength="' + get_number(fiel_type) + '" />'
+				else:
+					input_text += ' required/>'
+
+				self.addLine('		<div class="form-group">')
+				self.addLine('			<label class="label-control col-md-3" for="' + key + '"> ' + first_to_uppercase(key) + ' </label>')
+				self.addLine('			<div class="col-md-9">')
+				self.addLine(input_text)
+				self.addLine('				<span class="error-message" ng-show="form.$submitted && form.' + key + '.$error.required">This field is required</span>')
+				self.addLine('			</div>')
+				self.addLine('		</div>')
+
+# ============================================================================================================
 class ABMCreator(object):
 	def __init__(self, className, pluralName, table):
 		self.class_name  = className
 		self.plural_name = pluralName
 		self.files = []
 		self.table = table
-		self.initialize()
 
-	def initialize(self):
-		# Backend
+	# ======================================================
+	# === Backend files
+	# ======================================================
+	def modelFile(self):
 		self.files.append(ModelFile(self.class_name, self.plural_name))
-		self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
-		self.files.append(FormListFile(self.class_name, self.plural_name))
-		self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
-		self.files.append(ControllerFile(self.class_name, self.plural_name))
-		# Frontend
-		self.files.append(ServiceFile(self.class_name, self.plural_name))
-		self.files.append(EditControllerFile(self.class_name, self.plural_name))
-		self.files.append(ListControllerFile(self.class_name, self.plural_name))
-		self.files.append(ListHtmlFile(self.class_name, self.plural_name, self.table))
-		self.files.append(EditHtmlFile(self.class_name, self.plural_name, self.table))
+		return self
 
+	def dbTableFile(self):
+		self.files.append(DBTableFile(self.class_name, self.plural_name, self.table))
+		return self
+
+	def formListFile(self):
+		self.files.append(FormListFile(self.class_name, self.plural_name))
+		return self
+
+	def formEditFile(self):
+		self.files.append(FormEditFile(self.class_name, self.plural_name, self.table))
+		return self
+
+	def controllerFile(self):
+		self.files.append(ControllerFile(self.class_name, self.plural_name))
+		return self
+
+	def backendABM(self):
+		return self.modelFile().dbTableFile().formListFile().formEditFile().controllerFile()
+
+	# ======================================================
+	# === Frontend files
+	# ======================================================
+
+	def serviceFile(self):
+		self.files.append(ServiceFile(self.class_name, self.plural_name))
+		return self
+
+	def editControllerFile(self):
+		self.files.append(EditControllerFile(self.class_name, self.plural_name))
+		return self
+
+	def listControllerFile(self):
+		self.files.append(ListControllerFile(self.class_name, self.plural_name))
+		return self
+
+	def listHtmlFile(self):
+		self.files.append(ListHtmlFile(self.class_name, self.plural_name, self.table))
+		return self
+
+	def editHtmlFile(self):
+		self.files.append(EditHtmlFile(self.class_name, self.plural_name, self.table))
+		return self
+
+	def editHtmlBootstrapFile(self):
+		self.files.append(EditHtmlBootstrapFile(self.class_name, self.plural_name, self.table))
+		return self
+
+	def frontendABM(self):
+		return self.serviceFile().editControllerFile().listControllerFile().listHtmlFile().editHtmlFile()
+
+	def frontendABMWithBootstrapFile(self):
+		return self.serviceFile().editControllerFile().listControllerFile().listHtmlFile().editHtmlBootstrapFile()
+
+	# ======================================================
+	# === Full ABMS
+	# ======================================================
+	def fullABM(self):
+		return self.backendABM().frontendABM()
+
+	def fullABMWithBootrapHtml(self):
+		return self.backendABM().frontendABMWithBootstrapFile()
+		
 	def execute(self):
 		for abm_file in self.files:
 			abm_file.execute()
@@ -579,219 +712,98 @@ class ABMCreator(object):
 		print('<script src="scripts/controllers/' + MinPLURALNAME + 'Edit.js"></script>')
 
 # ============================================================================================================
+# ============================================================================================================
+# ============================================================================================================
+# ============================================================================================================
+logistics = {}
+logistics['id'] = 'integer not null auto_increment'
+logistics['eventId']   = 'integer'
+logistics['speakerId'] = 'integer'
+logistics['fromDate']  = 'timestamp'
+logistics['toDate']    = 'timestamp'
+logistics['price']     = 'numeric(10,2)'
+logistics['type']      = "enum('transfer', 'hotel', 'flight')"
+logistics['companionId'] = 'integer'
+logistics['currencyCode']  = 'varchar(3)'
+logistic = ABMCreator('EventLogistic', 'EventLogistics', logistics)
+# logistic.execute()
 
-car_agencies = {}
-car_agencies['id']     = 'integer not null auto_increment'
-car_agencies['name']   = 'varchar(50)'
-car_agencies['cityId'] = 'integer'
-car_agencies['address']= 'varchar(200)'
-car_agencies['phone']  = 'varchar(50)'
-car_agencies['fax']    = 'varchar(50)'
-car_agencies['email']  = 'varchar(50)'
-car_agencies['web']    = 'varchar(50)'
-car_agencies['mobile'] = 'varchar(100)'
-carAgencie = ABMCreator('CarAgencie', 'CarAgencies', car_agencies)
+eventTransfers = {}
+eventTransfers['id'] = 'integer not null'
+eventTransfers['eventCompanionId'] = 'integer'
+eventTransfers['pickupAddress']    = 'varchar(200)'
+eventTransfers['carAgencyId']      = 'integer'
+eventTransfers['description']      = 'text'
+eventTransfers['destinationAddress'] = 'varchar(200)'
+eventTransfer = ABMCreator('EventTransfer', 'EventTransfers', eventTransfers)
+# eventTransfer.execute()
 
-sponsors = {}
-sponsors['id']     = 'integer not null auto_increment'
-sponsors['name']   = 'varchar(100)'
-sponsors['description'] = 'varchar(500)'
-sponsor = ABMCreator('Sponsor', 'Sponsors', sponsors)
+eventTransferContacts = {}
+eventTransferContacts['id'] = 'integer not null'
+eventTransferContacts['eventTransferId'] = 'integer'
+eventTransferContacts['contactId'] = 'integer'
+eventTransferContact = ABMCreator('EventTransferContact', 'EventTransferContacts', eventTransferContacts)
+# eventTransferContact.execute()
 
-airlines = {}
-airlines['id']     = 'integer not null auto_increment'
-airlines['name']   = 'varchar(50)'
-airline = ABMCreator('Airline', 'Airlines', airlines)
+eventhotelBookings = {}
+eventhotelBookings['id'] = 'integer not null'
+eventhotelBookings['hotelId'] = 'integer'
+eventhotelBookings['roomType'] = "enum('wobi', 'bureau', 'speaker')"
+eventhotelBooking = ABMCreator('EventHotelBooking', 'EventHotelBookings', eventhotelBookings)
+# eventhotelBooking.execute()
 
-cities = {}
-cities['id']     = 'integer not null auto_increment'
-cities['name']   = 'varchar(50)'
-cities['countryCode'] = 'varchar(3)'
-city = ABMCreator('City', 'Cities', cities)
+eventFlights = {}
+eventFlights['id'] = 'integer not null'
+eventFlights['airlineId'] = 'integer'
+eventFlights['code']      = 'varchar(7)'
+eventFlights['class']     = 'varchar(50)'
+eventFlights['departureAirportCode'] = 'varchar(3)'
+eventFlights['arribalAirportCode']   = 'varchar(3)'
+eventFlights['backupFligths']        = 'varchar(50)'
+eventFlight = ABMCreator('EventFlight', 'EventFlights', eventFlights)
+# eventFlight.execute()
 
-venues = {}
-venues['id']       = 'integer not null auto_increment'
-venues['name']     = 'varchar(50)'
-venues['address']  = 'varchar(200)'
-venues['phone']    = 'varchar(50)'
-venues['fax']      = 'varchar(50)'
-venues['email']    = 'varchar(50)'
-venues['web']      = 'varchar(50)'
-venues['capacity'] = 'integer'
-venues['cityId']   = 'integer'
-venue = ABMCreator('Venue', 'Venues', venues)
+dateService = ABMCreator('Date', 'Dates', {})
+# dateService.serviceFile().execute()
 
-subeventTypes = {}
-subeventTypes['id']    = 'integer not null auto_increment'
-subeventTypes['name']  = 'varchar(50)'
-subeventTypes['color'] = 'varchar(7)'
-subeventType = ABMCreator('EventSubeventType', 'EventSubeventTypes', subeventTypes)
+# AUTH
+# ABMCreator('Auth','Auths',{}).serviceFile().execute()
 
-subeventFormats = {}
-subeventFormats['id']    = 'integer not null auto_increment'
-subeventFormats['name']  = 'varchar(50)'
-subeventFormats['eventItemTypeId'] = 'integer'
-subeventFormat = ABMCreator('EventSubeventFormat', 'EventSubeventFormats', subeventFormats)
+# USER
+userProperties = {}
+userProperties['id']    = 'integer not null auto_increment'
+userProperties['email'] = 'varchar(100)'
+userProperties['pass']  = 'varchar(100)'
+userProperties['passSalt']    = 'varchar(100)'
+userProperties['firstname']   = 'varchar(100)'
+userProperties['lastname']    = 'varchar(100)'
+userProperties['countryCode'] = 'varchar(3)'
+userProperties['company']  = 'varchar(100)'
+userProperties['area']     = 'varchar(100)'
+userProperties['position'] = 'varchar(100)'
+userProperties['image']    = 'varchar(255)'
+userProperties['creationDate'] = 'timestamp'
+userProperties['status'] = "enum('active', 'inactive', 'deleted')"
+ABMCreator('User', 'Users', userProperties).fullABMWithBootrapHtml().execute()
 
-moderatorRoles = {}
-moderatorRoles['id']    = 'integer not null auto_increment'
-moderatorRoles['name']  = 'varchar(50)'
-moderatorRole = ABMCreator('ModeratorRole', 'ModeratorRoles', moderatorRoles)
-
-contractStatuses = {}
-contractStatuses['id']    = 'integer not null auto_increment'
-contractStatuses['name']  = 'varchar(50)'
-contractStatuses['color']  = 'varchar(7)'
-contractStatus = ABMCreator('ContractStatus', 'ContractStatuses', contractStatuses)
-
-attachmentTypes = {}
-attachmentTypes['id']    = 'integer not null auto_increment'
-attachmentTypes['name']  = 'varchar(100)'
-attachmentTypes['origin'] = "enum('contracts','events','subevents','speakers')"
-attachmentType = ABMCreator('AttachmentType', 'AttachmentTypes', attachmentTypes)
-
-hotels = {}
-hotels['id']      = 'integer not null auto_increment'
-hotels['name']    = 'varchar(100)'
-hotels['cityId']  = 'integer'
-hotels['address'] = 'varchar(200)'
-hotels['phone']   = 'varchar(50)'
-hotels['mobile']  = 'varchar(50)'
-hotels['fax']     = 'varchar(50)'
-hotels['email']   = 'varchar(200)'
-hotels['web']     = 'varchar(50)'
-hotel = ABMCreator('Hotel', 'Hotels', hotels)
-
-# =========================================================================================================
-# SUBEVENT
-subevents = {}
-subevents['id']            =  'integer not null auto_increment'
-subevents['eventId']       =  'integer'
-subevents['eventTypeId']   =  'integer'
-subevents['eventFormatId'] =  'integer'
-subevents['name']          =  'varchar(50)'
-subevents['startDate']     =  'timestamp'
-subevents['endDate']       =  'timestamp'
-subevents['location']      =  'varchar(100)'
-subevents['mediaOutlet']   =  'varchar(50)'
-subevents['audienceProfile'] =  'text'
-subevents['expectedAttendees'] =  'integer'
-subevent = ABMCreator('Subevent', 'Subevents', subevents)
-
-# =========================================================================================================
-subeventAttachments = {}
-subeventAttachments['id']           =  'integer not null auto_increment'
-subeventAttachments['subeventId']   = 'integer'
-subeventAttachments['attachmentId'] = 'integer'
-subeventAttachments['onStage']      = 'bit(1)'
-subeventAttachment = ABMCreator('SubeventAttachment', 'SubeventAttachments', subeventAttachments)
-
-subeventBooks = {}
-subeventBooks['id'] = 'integer not null auto_increment'
-subeventBooks['subeventId'] = 'integer'
-subeventBooks['name'] = 'varchar(255)'
-subeventBooks['isbn'] = 'integer(13)'
-subeventBooks['genre'] = 'varchar(50)'
-subeventBook = ABMCreator('SubeventBook', 'SubeventBooks', subeventBooks)
-
-subeventContacts = {}
-subeventContacts['id'] = 'integer not null auto_increment'
-subeventContacts['subeventId'] = 'integer'
-subeventContacts['contactId']  = 'integer'
-subeventContacts['isMain']     = 'bit(1)'
-subeventContact = ABMCreator('SubeventContact', 'SubeventContacts', subeventContacts)
-
-subeventModerators = {}
-subeventModerators['id'] = 'integer not null auto_increment'
-subeventModerators['subeventId'] = 'integer'
-subeventModerators['moderatorId'] = 'integer'
-subeventModerator = ABMCreator('SubeventModerator', 'SubeventModerators', subeventModerators)
-
-subeventSpeakers = {}
-subeventSpeakers['id'] = 'integer not null auto_increment'
-subeventSpeakers['subeventId'] = 'integer'
-subeventSpeakers['speakerId']  = 'integer'
-subeventSpeaker = ABMCreator('SubeventSpeaker', 'SubeventSpeakers', subeventSpeakers)
-
-subeventSponsors = {}
-subeventSponsors['id'] = 'integer not null auto_increment'
-subeventSponsors['subeventId']   = 'integer'
-subeventSponsors['sponsorId']    = 'integer'
-subeventSponsors['expectations'] = 'text'
-subeventSponsor = ABMCreator('SubeventSponsor', 'SubeventSponsors', subeventSponsors)
-
-# subevent.execute()
-# subeventAttachment.execute()
-# subeventBook.execute()
-# subeventContact.execute()
-# subeventModerator.execute()
-# subeventSpeaker.execute()
-# subeventSponsor.execute()
-
-# =========================================================================================================
-
-speakerLogistics = {}
-speakerLogistics['id'] = 'integer not null auto_increment'
-speakerLogistics['eventId'] = 'integer'
-speakerLogistics['speakerId'] = 'integer'
-speakerLogistics['fromDate'] = 'timestamp'
-speakerLogistics['toDate'] = 'timestamp'
-speakerLogistics['currencyCode'] = 'integer'
-speakerLogistics['price'] = 'numeric(10,2)'
-speakerLogistics['type'] = "enum('transfer', 'hotel', 'flight')"
-speakerLogistic = ABMCreator('SpeakerLogistics', 'SpeakerLogistics', speakerLogistics)
-speakerLogistic.execute()
-
-
-"""
-create table events_logistics
-	id integer not null auto_increment,
-	eventId integer,
-	speakerId integer,
-	fromDate timestamp,
-	toDate timestamp,
-	currencyCode integer,
-	price numeric(10,2),
-	type enum('transfer', 'hotel', 'flight'),
-	primary key (id)
-);
-
-create table events_transfers ( 
-	id integer not null,
-	eventCompanionId integer,
-	carAgencyId integer,
-	pickupAddress varchar(200),
-	destinationAddress varchar(200),
-	description text,
-	primary key (id)
-);
-
-create table events_transfers_contacts (
-	id integer not null auto_increment,
-	eventTransferId integer,
-	contactId integer,
-	primary key (id)
-);
-
-create table events_hotel_bookings (
-	id integer not null,
-  hotelId integer,
-  eventCompanionId integer,
-  roomType varchar(50),
-  bookedBy enum('wobi', 'bureau', 'speaker'),
-  primary key (id)
-);
-
-create table events_flights (
-	id integer not null,
-	airlineId integer,
-	code varchar(7),
-	class varchar(50),
-	departureAirportCode integer,
-	departureTransferId integer,
-	arribalAirportCode integer,
-	arrivalTransferId integer,
-	backupFligths varchar(50),
-	primary key (id)
-);
-"""
+# +---------------+--------------------------+------+-----+---------+----------------+
+# | Field         | Type                     | Null | Key | Default | Extra          |
+# +---------------+--------------------------+------+-----+---------+----------------+
+# | id            | int(11)                  | NO   | PRI | NULL    | auto_increment |
+# | firstName     | varchar(50)              | YES  |     | NULL    |                |
+# | lastName      | varchar(50)              | YES  |     | NULL    |                |
+# | sex           | enum('','Male','Female') | YES  |     | NULL    |                |
+# | company       | varchar(50)              | YES  |     | NULL    |                |
+# | birthday      | date                     | YES  |     | NULL    |                |
+# | birthdayAlert | enum('Y','N')            | YES  |     | NULL    |                |
+# | nationality   | varchar(3)               | YES  | MUL | NULL    |                |
+# | country       | varchar(3)               | YES  | MUL | NULL    |                |
+# | bureau        | int(11)                  | YES  | MUL | NULL    |                |
+# | address       | varchar(256)             | YES  |     | NULL    |                |
+# | skype         | varchar(50)              | YES  |     | NULL    |                |
+# | timezone      | int(11)                  | YES  | MUL | NULL    |                |
+# | shortBio      | varchar(256)             | YES  |     | NULL    |                |
+# | bio           | text                     | YES  |     | NULL    |                |
+# | website       | varchar(128)             | YES  |     | NULL    |                |
+# | active        | enum('Y','N')            | NO   |     | Y       |                |
+# +---------------+--------------------------+------+-----+---------+----------------+
