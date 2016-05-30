@@ -130,6 +130,9 @@ class Application_Model_MayCLASSNAME {
 	}
 
 	public function fetchByFilters(array $form) {
+		if ($form['pageSize'] === '-1') {
+			return $this->_dbTable->fetchAll();
+		}
 		return $this->_dbTable->fetchAll(null, "{$form['sort']} {$form['sortOrder']}", 
 			$form['pageSize'], $form['pageSize'] * ($form['page'] - 1));
 	}
@@ -674,20 +677,17 @@ class ABMCreator(object):
 	# === Full ABMS
 	# ======================================================
 	def fullABM(self):
-		return self.backendABM().frontendABM()
+		return self.backendABM().frontendABM().appJsIndexInfo()
 
 	def fullABMWithBootrapHtml(self):
-		return self.backendABM().frontendABMWithBootstrapFile()
-		
-	def execute(self):
-		for abm_file in self.files:
-			abm_file.execute()
-			print("generated " + abm_file.path)
+		return self.backendABM().frontendABMWithBootstrapFile().appJsIndexInfo()
 
+	def appJsIndexInfo(self):
 		MayPLURALNAME = self.plural_name
 		MinPLURALNAME = first_to_lowercase(self.plural_name)
 		ResPLURALNAME = to_res(self.plural_name)
 		UrlPLURALNAME = to_res(self.plural_name)
+
 		print("")
 		print(".when('/" + UrlPLURALNAME + "',{")
 		print("	 templateUrl: 'views/" + ResPLURALNAME + "-list.html',")
@@ -710,65 +710,92 @@ class ABMCreator(object):
 		print('<script src="scripts/controllers/' + MinPLURALNAME + 'List.js"></script>')
 		print("")
 		print('<script src="scripts/controllers/' + MinPLURALNAME + 'Edit.js"></script>')
+		print('')
+		return self
+
+	def onTheFlyChanges(self, entityName, entityPluralName):
+		MayPLURALNAME = self.plural_name
+		MinPLURALNAME = first_to_lowercase(self.plural_name)
+		ResPLURALNAME = to_res(self.plural_name)
+		UrlPLURALNAME = to_res(self.plural_name)
+
+		code = """------------------------------------------------------------------
+in: app/views/UrlPLURALNAME-edit.html
+<a href="" ng-click="newEntityMayCLASSNAME()">New EntityMayCLASSNAME</a>
+
+------------------------------------------------------------------
+in: app/scripts/controllers/MinPLURALNAMEEdit.js
+$scope.newEntityMayCLASSNAME = function() {
+	var modalInstance = $uibModal.open({
+		templateUrl: 'views/EntityMinPLURALNAME-edit.html',
+		controller: 'EntityMayPLURALNAMEEditCtrl',
+		size: 'lg',
+		resolve: angular.extend(angular.copy(speakersFrontApp.absResolveEntityMayPLURALNAMEEditCtrl), {
+			data: function($route, EntityMinPLURALNAMEService) {
+				return { EntityMinCLASSNAME: {} }; //Needs the empty case of app/scripts/controllers/EntityMayCLASSNAMEEdit.js
+			}
+		})
+	});
+
+	modalInstance.result.then(function(response) {
+		console.log(response);
+		$scope.EntityMinPLURALNAME.push(response.EntityMinCLASSNAME);
+		$scope.data.MinCLASSNAME.EntityMinCLASSNAMEId = response.EntityMinCLASSNAME.id;
+	});
+}
+
+------------------------------------------------------------------
+in: app/scripts/controllers/EntityMayCLASSNAMEEdit.js
+
+add $uibModalInstance to the parameters of controller.
+
+$scope.backToList = function(){
+	if ($uibModalInstance) {
+		$uibModalInstance.dismiss();
+	} else {
+		window.location = '#/EntityMinPLURALNAME';
+	}
+};
+
+$scope.saveEntityMayCLASSNAME = function(form){
+	if (form.$valid) {
+		EntityMinPLURALNAMEService.save($scope.data.EntityMinCLASSNAME, $scope.data.isNew).then(function(response){
+			if ($uibModalInstance) {
+				$uibModalInstance.close(response);
+			} else {
+				window.location = '#/EntityMinPLURALNAME';
+			}
+		});
+	}
+};
+
+speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.copy(speakersFrontApp.absResolveEntityMayPLURALNAMEEditCtrl), {
+  $uibModalInstance: function(){
+    return null;
+  },
+});
+"""
+		code = code.replace('EntityMayCLASSNAME', entityName)
+		code = code.replace('EntityMinCLASSNAME', first_to_lowercase(entityName))
+		code = code.replace('EntityMayPLURALNAME', entityPluralName)
+		code = code.replace('EntityMinPLURALNAME', first_to_lowercase(entityPluralName))
+		code = code.replace('MayCLASSNAME', self.class_name)
+		code = code.replace('MinCLASSNAME', first_to_lowercase(self.class_name))
+		code = code.replace('MayPLURALNAME', self.plural_name)
+		code = code.replace('MinPLURALNAME', first_to_lowercase(self.plural_name))
+		code = code.replace('UrlPLURALNAME', to_res(self.plural_name))
+		code = code.replace('SnakePLURALNAME', to_snake_case(self.plural_name))
+		print(code)
+		
+	def execute(self):
+		for abm_file in self.files:
+			abm_file.execute()
+			print("generated " + abm_file.path)
 
 # ============================================================================================================
 # ============================================================================================================
 # ============================================================================================================
 # ============================================================================================================
-logistics = {}
-logistics['id'] = 'integer not null auto_increment'
-logistics['eventId']   = 'integer'
-logistics['speakerId'] = 'integer'
-logistics['fromDate']  = 'timestamp'
-logistics['toDate']    = 'timestamp'
-logistics['price']     = 'numeric(10,2)'
-logistics['type']      = "enum('transfer', 'hotel', 'flight')"
-logistics['companionId'] = 'integer'
-logistics['currencyCode']  = 'varchar(3)'
-logistic = ABMCreator('EventLogistic', 'EventLogistics', logistics)
-# logistic.execute()
-
-eventTransfers = {}
-eventTransfers['id'] = 'integer not null'
-eventTransfers['eventCompanionId'] = 'integer'
-eventTransfers['pickupAddress']    = 'varchar(200)'
-eventTransfers['carAgencyId']      = 'integer'
-eventTransfers['description']      = 'text'
-eventTransfers['destinationAddress'] = 'varchar(200)'
-eventTransfer = ABMCreator('EventTransfer', 'EventTransfers', eventTransfers)
-# eventTransfer.execute()
-
-eventTransferContacts = {}
-eventTransferContacts['id'] = 'integer not null'
-eventTransferContacts['eventTransferId'] = 'integer'
-eventTransferContacts['contactId'] = 'integer'
-eventTransferContact = ABMCreator('EventTransferContact', 'EventTransferContacts', eventTransferContacts)
-# eventTransferContact.execute()
-
-eventhotelBookings = {}
-eventhotelBookings['id'] = 'integer not null'
-eventhotelBookings['hotelId'] = 'integer'
-eventhotelBookings['roomType'] = "enum('wobi', 'bureau', 'speaker')"
-eventhotelBooking = ABMCreator('EventHotelBooking', 'EventHotelBookings', eventhotelBookings)
-# eventhotelBooking.execute()
-
-eventFlights = {}
-eventFlights['id'] = 'integer not null'
-eventFlights['airlineId'] = 'integer'
-eventFlights['code']      = 'varchar(7)'
-eventFlights['class']     = 'varchar(50)'
-eventFlights['departureAirportCode'] = 'varchar(3)'
-eventFlights['arribalAirportCode']   = 'varchar(3)'
-eventFlights['backupFligths']        = 'varchar(50)'
-eventFlight = ABMCreator('EventFlight', 'EventFlights', eventFlights)
-# eventFlight.execute()
-
-dateService = ABMCreator('Date', 'Dates', {})
-# dateService.serviceFile().execute()
-
-# AUTH
-# ABMCreator('Auth','Auths',{}).serviceFile().execute()
-
 # USER
 userProperties = {}
 userProperties['id']    = 'integer not null auto_increment'
@@ -784,26 +811,113 @@ userProperties['position'] = 'varchar(100)'
 userProperties['image']    = 'varchar(255)'
 userProperties['creationDate'] = 'timestamp'
 userProperties['status'] = "enum('active', 'inactive', 'deleted')"
-ABMCreator('User', 'Users', userProperties).fullABMWithBootrapHtml().execute()
+# ABMCreator('User', 'Users', userProperties).fullABMWithBootrapHtml().execute()
 
-# +---------------+--------------------------+------+-----+---------+----------------+
-# | Field         | Type                     | Null | Key | Default | Extra          |
-# +---------------+--------------------------+------+-----+---------+----------------+
-# | id            | int(11)                  | NO   | PRI | NULL    | auto_increment |
-# | firstName     | varchar(50)              | YES  |     | NULL    |                |
-# | lastName      | varchar(50)              | YES  |     | NULL    |                |
-# | sex           | enum('','Male','Female') | YES  |     | NULL    |                |
-# | company       | varchar(50)              | YES  |     | NULL    |                |
-# | birthday      | date                     | YES  |     | NULL    |                |
-# | birthdayAlert | enum('Y','N')            | YES  |     | NULL    |                |
-# | nationality   | varchar(3)               | YES  | MUL | NULL    |                |
-# | country       | varchar(3)               | YES  | MUL | NULL    |                |
-# | bureau        | int(11)                  | YES  | MUL | NULL    |                |
-# | address       | varchar(256)             | YES  |     | NULL    |                |
-# | skype         | varchar(50)              | YES  |     | NULL    |                |
-# | timezone      | int(11)                  | YES  | MUL | NULL    |                |
-# | shortBio      | varchar(256)             | YES  |     | NULL    |                |
-# | bio           | text                     | YES  |     | NULL    |                |
-# | website       | varchar(128)             | YES  |     | NULL    |                |
-# | active        | enum('Y','N')            | NO   |     | Y       |                |
-# +---------------+--------------------------+------+-----+---------+----------------+
+speakerProperties = {}
+speakerProperties['id'] = 'integer not null auto_increment'
+speakerProperties['bureauId']   = 'integer'
+speakerProperties['timezoneId'] = 'integer'
+speakerProperties['firstName']= 'varchar(50)'
+speakerProperties['lastName'] = 'varchar(50)'
+speakerProperties['company']  = 'varchar(50)'
+speakerProperties['skype']    = 'varchar(50)'
+speakerProperties['sex']      = "enum('','Male','Female')"
+speakerProperties['birthday'] = 'date'
+speakerProperties['birthdayAlert'] = "bit(1)"
+speakerProperties['nationality']   = 'varchar(3)'
+speakerProperties['countryCode']   = 'varchar(3)'
+speakerProperties['address']  = 'varchar(256)'
+speakerProperties['shortBio'] = 'varchar(256)'
+speakerProperties['bio'] = 'text'
+speakerProperties['website'] = 'varchar(128)'
+speakerProperties['active']  = "bit(1)"
+# ABMCreator('Speaker', 'Speakers', speakerProperties).fullABMWithBootrapHtml().execute()
+
+speakerContactsProperties = {}
+speakerContactsProperties['id'] = 'integer not null auto_increment'
+speakerContactsProperties['speakerId'] = 'integer'
+speakerContactsProperties['contactId'] = 'integer'
+# ABMCreator('SpeakerContact', 'SpeakerContacts', speakerContactsProperties).dbTableFile().execute()
+
+speakerEmailProperties = {}
+speakerEmailProperties['id'] = 'integer not null auto_increment'
+speakerEmailProperties['speakerId'] = 'integer'
+speakerEmailProperties['type']      = "enum('Work','Personal')"
+speakerEmailProperties['email']     = "varchar(50)"
+# ABMCreator('SpeakerEmail', 'SpeakerEmails', speakerEmailProperties).dbTableFile().execute()
+
+speakerPhonesProperties = {}
+speakerPhonesProperties['id'] = 'integer not null auto_increment'
+speakerPhonesProperties['speakerId']   = 'integer'
+speakerPhonesProperties['type']        = "enum('Home','Work','Mobile','Fax')"
+speakerPhonesProperties['phonenumber'] = "varchar(50)"
+# ABMCreator('SpeakerPhone', 'SpeakerPhones', speakerPhonesProperties).dbTableFile().execute()
+
+themeProperties = {}
+themeProperties['id'] = 'integer not null auto_increment'
+themeProperties['name'] = 'varchar(20)'
+# ABMCreator('Theme', 'Themes', themeProperties).fullABMWithBootrapHtml().execute()
+
+bureauProperties = {}
+bureauProperties['id'] = 'integer not null auto_increment'
+bureauProperties['name'] = 'varchar(256)'
+bureauProperties['abbreviation'] = 'varchar(3)'
+bureauProperties['active']       = 'bit(1)'
+# ABMCreator('Bureau', 'Bureaux', bureauProperties).fullABMWithBootrapHtml().execute()
+
+speakerThemeProperties = {}
+speakerThemeProperties['id'] = 'integer not null auto_increment'
+speakerThemeProperties['speakerId'] = 'integer'
+speakerThemeProperties['themeId']   = 'integer'
+# ABMCreator('SpeakerTheme', 'SpeakerThemes', speakerThemeProperties).dbTableFile().execute()
+
+requirementTypeProperties = {}
+requirementTypeProperties['id'] = 'integer not null auto_increment'
+requirementTypeProperties['name'] = 'varchar(30)'
+# ABMCreator('RequirementType', 'RequirementTypes', requirementTypeProperties).fullABMWithBootrapHtml().execute()
+
+speakerRequirementProperties = {}
+speakerRequirementProperties['id'] = 'integer not null auto_increment'
+speakerRequirementProperties['speakerId']   = 'integer'
+speakerRequirementProperties['typeId']      = 'integer'
+speakerRequirementProperties['description'] = 'varchar(200)'
+# ABMCreator('SpeakerRequirement', 'SpeakerRequirements', speakerRequirementProperties).dbTableFile().execute()
+
+# ABMCreator('Event','Events',{}).onTheFlyChanges('Venue','Venues')
+# ABMCreator('Event','Events',{}).onTheFlyChanges('Contact','Contacts')
+# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Contact','Contacts')
+# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Speaker','Speakers')
+# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Sponsor','Sponsors')
+# ABMCreator('Sponsor','Sponsors',{}).onTheFlyChanges('Contact','Contacts')
+# ABMCreator('Contact','Contacts',{}).onTheFlyChanges('Bureau','Bureaux')
+# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Contact','Contacts')
+# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Theme','Themes')
+# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Requirement','Requirements')
+# ABMCreator('Venue','Venues',{}).onTheFlyChanges('Contact','Contacts')
+
+timezoneProperties = {}
+timezoneProperties['id'] = 'integer not null auto_increment'
+timezoneProperties['name']     = 'varchar(44)'
+timezoneProperties['timezone'] = 'varchar(30)'
+# ABMCreator('Timezone', 'Timezones', timezoneProperties).fullABMWithBootrapHtml().execute()
+
+companionProperties = {}
+companionProperties['fromDate'] = 'timestamp'
+companionProperties['toDate']   = 'timestamp'
+companionProperties['price']    = 'numeric(10,2)'
+companionProperties['type']     = "enum('transfer', 'hotel', 'flight')"
+companionProperties['detail']   = 'varchar(30)'
+# ABMCreator('CompanionLogistic', 'CompanionLogistics', companionProperties).serviceFile().listHtmlFile().listControllerFile().execute()
+
+countryProperties = {}
+countryProperties['code'] = 'varchar(3)'
+countryProperties['name'] = 'varchar(100)'
+countryProperties['iso_3166_1_alpha_2_code'] = 'varchar(2)'
+# ABMCreator('Country', 'Countries', countryProperties).fullABMWithBootrapHtml().execute()
+
+idTypesProperties = {}
+idTypesProperties['id']   = 'integer not null auto_increment'
+idTypesProperties['name'] = 'varchar(20)'
+# ABMCreator('IdType', 'IdTypes', idTypesProperties).fullABMWithBootrapHtml().execute()
+
+# ABMCreator('EventHome', 'EventsHome', {}).listControllerFile().listHtmlFile().execute()
