@@ -5,6 +5,7 @@ import re
 import os
 import codecs
 import urllib.request
+import urllib.parse
 from html.parser import HTMLParser
 
 def get_int_from(aString):
@@ -13,16 +14,53 @@ def get_int_from(aString):
 def get_title(title):
   return title.split(': ')[1]
 
-# def decodeFrom(aString, encode='latin1', decode='utf8'):
-#   return bytes(str(aString), encode).decode(decode) 
+escape_range = [
+  (0xA0, 0xD7FF),
+  (0xE000, 0xF8FF),
+  (0xF900, 0xFDCF),
+  (0xFDF0, 0xFFEF),
+  (0x10000, 0x1FFFD),
+  (0x20000, 0x2FFFD),
+  (0x30000, 0x3FFFD),
+  (0x40000, 0x4FFFD),
+  (0x50000, 0x5FFFD),
+  (0x60000, 0x6FFFD),
+  (0x70000, 0x7FFFD),
+  (0x80000, 0x8FFFD),
+  (0x90000, 0x9FFFD),
+  (0xA0000, 0xAFFFD),
+  (0xB0000, 0xBFFFD),
+  (0xC0000, 0xCFFFD),
+  (0xD0000, 0xDFFFD),
+  (0xE1000, 0xEFFFD),
+  (0xF0000, 0xFFFFD),
+  (0x100000, 0x10FFFD),
+]
 
-
-  # U+00E1  á \xc3\xa1  LATIN SMALL LETTER A WITH ACUTE
-  # U+00E9  é \xc3\xa9  LATIN SMALL LETTER E WITH ACUTE
-  # U+00ED  í \xc3\xad  LATIN SMALL LETTER I WITH ACUTE
-  # U+00F3  ó \xc3\xb3  LATIN SMALL LETTER O WITH ACUTE
-  # U+00FA  ú \xc3\xba  LATIN SMALL LETTER U WITH ACUTE
-  # U+00D3  Ó \xc3\x93  LATIN CAPITAL LETTER O WITH ACUTE
+def encode(c):
+    retval = c
+    i = ord(c)
+    for low, high in escape_range:
+        if i < low:
+            break
+        if i >= low and i <= high:
+            retval = "".join(["%%%2X" % o for o in c.encode('utf-8')])
+            break
+    return retval
+    
+def iri2uri(uri):
+    """Convert an IRI to a URI. Note that IRIs must be
+    passed in a unicode strings. That is, do not utf-8 encode
+    the IRI before passing it into the function."""
+    if isinstance(uri ,str):
+        (scheme, authority, path, query, fragment) = urllib.parse.urlsplit(uri)
+        authority = authority.encode('idna').decode('utf-8')
+        # For each character in 'ucschar' or 'iprivate'
+        #  1. encode as utf-8
+        #  2. then %-encode each octet of that utf-8
+        uri = urllib.parse.urlunsplit((scheme, authority, path, query, fragment))
+        uri = "".join([encode(c) for c in uri])
+    return uri
 
 class JokerFansubHTMLParser(HTMLParser):
   def __init__(self, path):
@@ -139,7 +177,8 @@ class MangaDownloader():
           self.parse_html(path + str(page))
 
           imageName = self.get_file_name(vol, chapter, page)
-          self.download_image(self.parser.data['imagePath'], dirName + '/' + imageName)
+          print(self.parser.data['imagePath'])
+          self.download_image(iri2uri(self.parser.data['imagePath']), dirName + '/' + imageName)
           print('generate ' + dirName + '/' + imageName)
 
 path = 'http://reader.jokerfansub.com/read/_one_piece/es/VOL/CHAPTER/page/'
@@ -150,23 +189,13 @@ vols = { 1: [8,7,6,5,4,3,2,1] }
 parser = JokerFansubHTMLParser('http://reader.jokerfansub.com/read/_one_piece/es/')
 
 md = MangaDownloader(vols, path, parser)
-md.download_mangas()
+# md.download_mangas()
 
 path = 'http://reader.jokerfansub.com/read/dragon_ball_super/es/VOL/CHAPTER/page/'
+vols = { 2: [9] }
+vols = { 1: [3,2,1] }
 vols = { 2: [13,12,11,10,9,8,7], 1: [6,5,4,3,2,1] }
 
 parser = JokerFansubHTMLParser('http://reader.jokerfansub.com/read/dragon_ball_super/es/')
 md = MangaDownloader(vols, path, parser)
-# md.download_mangas()
-
-
-
-
-
-
-
-
-
-
-
-
+md.download_mangas()
