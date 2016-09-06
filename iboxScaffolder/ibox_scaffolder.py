@@ -1,11 +1,15 @@
 import os, re, config_parser
 
-# =============
+
+# =============================
 # Congifs
 # ============================================================================================================
 
 config = config_parser.getConfigTree('ibox_paths.cfg')
 
+
+# =============================
+# Helper Functions
 # ============================================================================================================
 
 first_to_lowercase = lambda s: s[:1].lower() + s[1:] if s else ''
@@ -23,7 +27,11 @@ def to_res(name):
 def contains(sub_string, string):
 	return sub_string in string
 
+
+# =============================
+# Parent Class
 # ============================================================================================================
+
 class ABMFile():
 	def __init__(self, className, pluralName, table):
 		self.code = ""
@@ -44,7 +52,11 @@ class ABMFile():
 		abm_file.write(self.code)
 		abm_file.close()
 
+
+# =============================
+# Backend Controller
 # ============================================================================================================
+
 class ControllerFile(ABMFile):
 	def __init__(self, className, pluralName):
 		ABMFile.__init__(self, className, pluralName, {})
@@ -118,7 +130,11 @@ class MayPLURALNAMEController extends Trinomio_Rest_Controller {
 		code = code.replace("SnakePLURALNAME",to_snake_case(self.plural_name))
 		self.code = code
 
+
+# =============================
+# Backend Model
 # ============================================================================================================
+
 class ModelFile(ABMFile):
 	def __init__(self, className, pluralName):
 		ABMFile.__init__(self, className, pluralName, None)
@@ -173,7 +189,10 @@ class Application_Model_MayCLASSNAME {
 		self.code = code
 
 
+# =============================
+# Backend List Form
 # ============================================================================================================
+
 class FormListFile(ABMFile):
 	def __init__(self, className, pluralName):
 		ABMFile.__init__(self, className, pluralName, None)
@@ -232,7 +251,11 @@ class Application_Form_MayCLASSNAMEList extends Zend_Form {
 		code = code.replace("MayCLASSNAME", self.class_name)
 		self.code = code
 
+
+# =============================
+# Backend Edit Form
 # ============================================================================================================
+
 class FormEditFile(ABMFile):
 	def __init__(self, className, pluralName, table):
 		ABMFile.__init__(self, className, pluralName, table)
@@ -240,7 +263,6 @@ class FormEditFile(ABMFile):
 		print self.path
 
 	def generateCode(self):
-		table_name = first_to_lowercase(self.plural_name)
 		self.addLine("<?php")
 		self.addLine("")
 		self.addLine("class Application_Form_" + self.class_name + "Edit extends Zend_Form {")
@@ -275,7 +297,11 @@ class FormEditFile(ABMFile):
 			self.addLine("		$this->addElement($this->" + key + ");")
 			self.addLine("")
 
+
+# =============================
+# Backend Dbtable
 # ============================================================================================================
+
 class DBTableFile(ABMFile):
 	def __init__(self, className, pluralName, table):
 		ABMFile.__init__(self, className, pluralName, table)
@@ -303,7 +329,11 @@ class Application_Model_DbTable_MayCLASSNAME extends Trinomio_DbTable_Abstract {
 		self.addLine("	primary key (id)")
 		self.addLine(");")
 
+
+# =============================
+# Frontend Service
 # ============================================================================================================
+
 class ServiceFile(ABMFile):
 	def __init__(self, className, pluralName):
 		ABMFile.__init__(self, className, pluralName, None)
@@ -338,7 +368,11 @@ class ServiceFile(ABMFile):
 		self.addLine("	});")
 		self.addLine("})();")
 
+
+# =============================
+# Frontend Edit Controller
 # ============================================================================================================
+
 class EditControllerFile(ABMFile):
 	def __init__(self, className, pluralName):
 		ABMFile.__init__(self, className, pluralName, None)
@@ -399,7 +433,10 @@ class EditControllerFile(ABMFile):
 		self.code = code
 
 
+# =============================
+# Frontend List Controller
 # ============================================================================================================
+
 class ListControllerFile(ABMFile):
 	def __init__(self, className, pluralName):
 		ABMFile.__init__(self, className, pluralName, None)
@@ -461,7 +498,11 @@ class ListControllerFile(ABMFile):
 		code = code.replace('SnakePLURALNAME', to_snake_case(self.plural_name))
 		self.code = code
 
+
+# =============================
+# Frontend List View
 # ============================================================================================================
+
 class ListHtmlFile(ABMFile):
 	def __init__(self, className, pluralName, table):
 		ABMFile.__init__(self, className, pluralName, table)
@@ -469,9 +510,6 @@ class ListHtmlFile(ABMFile):
 		print self.path
 
 	def generateCode(self):
-		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		MayPLURALNAME = self.plural_name
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
 		self.addLine('<div class="row">')
 		self.addLine('  <div class="col-xs-9">')
 		self.addLine('    <h1 style="margin-top:10px">' + self.class_name.upper() + '</h1>')
@@ -503,48 +541,12 @@ class ListHtmlFile(ABMFile):
 		self.addLine('	</tr>')
 		self.addLine('</table>')
 
+
+# =============================
+# Frontend Edit View
 # ============================================================================================================
+
 class EditHtmlFile(ABMFile):
-	def __init__(self, className, pluralName, table):
-		ABMFile.__init__(self, className, pluralName, table)
-		self.path = config['frontend']['ng-views'] + to_res(pluralName) + '-edit.html'
-		print self.path
-
-	def generateCode(self):
-		self.addLine('<div class="row">')
-		self.addLine('  <div class="container">')
-		self.addLine('    <div class="col-xs-12">')
-		self.addLine('      <h1 class="center">' + self.class_name.upper() + '</h1>')
-		self.addLine('    </div>')
-		self.addLine('  </div>')
-		self.addLine('</div>')
-		self.addLine('<form name="form" class="main-form" novalidate ng-submit="save' + self.class_name + '(form)">')
-		self.generateFields()
-		self.addLine('	<button type="submit" class="btn btn-primary"> Save ' + self.class_name + ' </button>')
-		self.addLine('	<button type="button" class="btn btn-default" ng-click="backToList()"> Back to List </button>')
-		self.addLine('</form>')
-
-	def generateFields(self):
-		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
-		for key in self.table.keys():
-			if key != 'id':
-				fiel_type  = self.table[key]
-				input_text = '		<input type="text" name="' + key + '" class="form-control" ng-model="data.' + MinCLASSNAME + '.' + key + '" placeholder="' + first_to_uppercase(key) + '"'
-				
-				if contains('varchar', fiel_type):
-					input_text += ' required maxlength="' + get_number(fiel_type) + '" />'
-				else:
-					input_text += ' required/>'
-
-				self.addLine('	<div class="form-group">')
-				self.addLine('		<label> ' + first_to_uppercase(key) + ' </label>')
-				self.addLine(input_text)
-				self.addLine('		<span class="error-message" ng-show="form.$submitted && form.' + key + '.$error.required">This field is required</span>')
-				self.addLine('	</div>')
-
-# ============================================================================================================
-class EditHtmlBootstrapFile(ABMFile):
 	def __init__(self, className, pluralName, table):
 		ABMFile.__init__(self, className, pluralName, table)
 		self.path = config['frontend']['ng-views'] + to_res(pluralName) + '-edit.html'
@@ -604,7 +606,6 @@ class EditHtmlBootstrapFile(ABMFile):
 
 	def generateFields(self):
 		MinCLASSNAME  = first_to_lowercase(self.class_name)
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
 		for key in self.table.keys():
 			if key != 'id':
 				fiel_type  = self.table[key]
@@ -623,7 +624,11 @@ class EditHtmlBootstrapFile(ABMFile):
 				self.addLine('			</div>')
 				self.addLine('		</div>')
 
+
+# =============================
+# Factories
 # ============================================================================================================
+
 class ABMCreator(object):
 	def __init__(self, className, pluralName, table):
 		self.class_name  = className
@@ -681,24 +686,14 @@ class ABMCreator(object):
 		self.files.append(EditHtmlFile(self.class_name, self.plural_name, self.table))
 		return self
 
-	def editHtmlBootstrapFile(self):
-		self.files.append(EditHtmlBootstrapFile(self.class_name, self.plural_name, self.table))
-		return self
-
-	def frontendABM(self):
+	def frontendABMFile(self):
 		return self.serviceFile().editControllerFile().listControllerFile().listHtmlFile().editHtmlFile()
-
-	def frontendABMWithBootstrapFile(self):
-		return self.serviceFile().editControllerFile().listControllerFile().listHtmlFile().editHtmlBootstrapFile()
 
 	# ======================================================
 	# === Full ABMS
 	# ======================================================
 	def fullABM(self):
-		return self.backendABM().frontendABM().appJsIndexInfo()
-
-	def fullABMWithBootrapHtml(self):
-		return self.backendABM().frontendABMWithBootstrapFile().appJsIndexInfo()
+		return self.backendABM().frontendABMFile().appJsIndexInfo()
 
 	def appJsIndexInfo(self):
 		MayPLURALNAME = self.plural_name
@@ -732,11 +727,6 @@ class ABMCreator(object):
 		return self
 
 	def onTheFlyChanges(self, entityName, entityPluralName):
-		MayPLURALNAME = self.plural_name
-		MinPLURALNAME = first_to_lowercase(self.plural_name)
-		ResPLURALNAME = to_res(self.plural_name)
-		UrlPLURALNAME = to_res(self.plural_name)
-
 		code = """------------------------------------------------------------------
 in: app/views/UrlPLURALNAME-edit.html
 <a href="" ng-click="newEntityMayCLASSNAME()">New EntityMayCLASSNAME</a>
@@ -810,132 +800,135 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
 			abm_file.execute()
 			print("generated " + abm_file.path)
 
+
+# =============================
+# MAIN
 # ============================================================================================================
-# ============================================================================================================
-# ============================================================================================================
-# ============================================================================================================
-# USER
-userProperties = {}
-userProperties['id']    = 'integer not null auto_increment'
-userProperties['email'] = 'varchar(100)'
-userProperties['pass']  = 'varchar(100)'
-userProperties['passSalt']    = 'varchar(100)'
-userProperties['firstname']   = 'varchar(100)'
-userProperties['lastname']    = 'varchar(100)'
-userProperties['countryCode'] = 'varchar(3)'
-userProperties['company']  = 'varchar(100)'
-userProperties['area']     = 'varchar(100)'
-userProperties['position'] = 'varchar(100)'
-userProperties['image']    = 'varchar(255)'
-userProperties['creationDate'] = 'timestamp'
-userProperties['status'] = "enum('active', 'inactive', 'deleted')"
-# ABMCreator('User', 'Users', userProperties).fullABMWithBootrapHtml().execute()
 
-speakerProperties = {}
-speakerProperties['id'] = 'integer not null auto_increment'
-speakerProperties['bureauId']   = 'integer'
-speakerProperties['timezoneId'] = 'integer'
-speakerProperties['firstName']= 'varchar(50)'
-speakerProperties['lastName'] = 'varchar(50)'
-speakerProperties['company']  = 'varchar(50)'
-speakerProperties['skype']    = 'varchar(50)'
-speakerProperties['sex']      = "enum('','Male','Female')"
-speakerProperties['birthday'] = 'date'
-speakerProperties['birthdayAlert'] = "bit(1)"
-speakerProperties['nationality']   = 'varchar(3)'
-speakerProperties['countryCode']   = 'varchar(3)'
-speakerProperties['address']  = 'varchar(256)'
-speakerProperties['shortBio'] = 'varchar(256)'
-speakerProperties['bio'] = 'text'
-speakerProperties['website'] = 'varchar(128)'
-speakerProperties['active']  = "bit(1)"
-# ABMCreator('Speaker', 'Speakers', speakerProperties).fullABMWithBootrapHtml().execute()
+if __name__ == "__main__":
+	
+	# USER
+	userProperties = {}
+	userProperties['id']    = 'integer not null auto_increment'
+	userProperties['email'] = 'varchar(100)'
+	userProperties['pass']  = 'varchar(100)'
+	userProperties['passSalt']    = 'varchar(100)'
+	userProperties['firstname']   = 'varchar(100)'
+	userProperties['lastname']    = 'varchar(100)'
+	userProperties['countryCode'] = 'varchar(3)'
+	userProperties['company']  = 'varchar(100)'
+	userProperties['area']     = 'varchar(100)'
+	userProperties['position'] = 'varchar(100)'
+	userProperties['image']    = 'varchar(255)'
+	userProperties['creationDate'] = 'timestamp'
+	userProperties['status'] = "enum('active', 'inactive', 'deleted')"
+	# ABMCreator('User', 'Users', userProperties).fullABM().execute()
 
-speakerContactsProperties = {}
-speakerContactsProperties['id'] = 'integer not null auto_increment'
-speakerContactsProperties['speakerId'] = 'integer'
-speakerContactsProperties['contactId'] = 'integer'
-# ABMCreator('SpeakerContact', 'SpeakerContacts', speakerContactsProperties).dbTableFile().execute()
+	speakerProperties = {}
+	speakerProperties['id'] = 'integer not null auto_increment'
+	speakerProperties['bureauId']   = 'integer'
+	speakerProperties['timezoneId'] = 'integer'
+	speakerProperties['firstName']= 'varchar(50)'
+	speakerProperties['lastName'] = 'varchar(50)'
+	speakerProperties['company']  = 'varchar(50)'
+	speakerProperties['skype']    = 'varchar(50)'
+	speakerProperties['sex']      = "enum('','Male','Female')"
+	speakerProperties['birthday'] = 'date'
+	speakerProperties['birthdayAlert'] = "bit(1)"
+	speakerProperties['nationality']   = 'varchar(3)'
+	speakerProperties['countryCode']   = 'varchar(3)'
+	speakerProperties['address']  = 'varchar(256)'
+	speakerProperties['shortBio'] = 'varchar(256)'
+	speakerProperties['bio'] = 'text'
+	speakerProperties['website'] = 'varchar(128)'
+	speakerProperties['active']  = "bit(1)"
+	# ABMCreator('Speaker', 'Speakers', speakerProperties).fullABM().execute()
 
-speakerEmailProperties = {}
-speakerEmailProperties['id'] = 'integer not null auto_increment'
-speakerEmailProperties['speakerId'] = 'integer'
-speakerEmailProperties['type']      = "enum('Work','Personal')"
-speakerEmailProperties['email']     = "varchar(50)"
-# ABMCreator('SpeakerEmail', 'SpeakerEmails', speakerEmailProperties).dbTableFile().execute()
+	speakerContactsProperties = {}
+	speakerContactsProperties['id'] = 'integer not null auto_increment'
+	speakerContactsProperties['speakerId'] = 'integer'
+	speakerContactsProperties['contactId'] = 'integer'
+	# ABMCreator('SpeakerContact', 'SpeakerContacts', speakerContactsProperties).dbTableFile().execute()
 
-speakerPhonesProperties = {}
-speakerPhonesProperties['id'] = 'integer not null auto_increment'
-speakerPhonesProperties['speakerId']   = 'integer'
-speakerPhonesProperties['type']        = "enum('Home','Work','Mobile','Fax')"
-speakerPhonesProperties['phonenumber'] = "varchar(50)"
-# ABMCreator('SpeakerPhone', 'SpeakerPhones', speakerPhonesProperties).dbTableFile().execute()
+	speakerEmailProperties = {}
+	speakerEmailProperties['id'] = 'integer not null auto_increment'
+	speakerEmailProperties['speakerId'] = 'integer'
+	speakerEmailProperties['type']      = "enum('Work','Personal')"
+	speakerEmailProperties['email']     = "varchar(50)"
+	# ABMCreator('SpeakerEmail', 'SpeakerEmails', speakerEmailProperties).dbTableFile().execute()
 
-themeProperties = {}
-themeProperties['id'] = 'integer not null auto_increment'
-themeProperties['name'] = 'varchar(20)'
-# ABMCreator('Theme', 'Themes', themeProperties).fullABMWithBootrapHtml().execute()
+	speakerPhonesProperties = {}
+	speakerPhonesProperties['id'] = 'integer not null auto_increment'
+	speakerPhonesProperties['speakerId']   = 'integer'
+	speakerPhonesProperties['type']        = "enum('Home','Work','Mobile','Fax')"
+	speakerPhonesProperties['phonenumber'] = "varchar(50)"
+	# ABMCreator('SpeakerPhone', 'SpeakerPhones', speakerPhonesProperties).dbTableFile().execute()
 
-bureauProperties = {}
-bureauProperties['id'] = 'integer not null auto_increment'
-bureauProperties['name'] = 'varchar(256)'
-bureauProperties['abbreviation'] = 'varchar(3)'
-bureauProperties['active']       = 'bit(1)'
-# ABMCreator('Bureau', 'Bureaux', bureauProperties).fullABMWithBootrapHtml().execute()
+	themeProperties = {}
+	themeProperties['id'] = 'integer not null auto_increment'
+	themeProperties['name'] = 'varchar(20)'
+	# ABMCreator('Theme', 'Themes', themeProperties).fullABM().execute()
 
-speakerThemeProperties = {}
-speakerThemeProperties['id'] = 'integer not null auto_increment'
-speakerThemeProperties['speakerId'] = 'integer'
-speakerThemeProperties['themeId']   = 'integer'
-# ABMCreator('SpeakerTheme', 'SpeakerThemes', speakerThemeProperties).dbTableFile().execute()
+	bureauProperties = {}
+	bureauProperties['id'] = 'integer not null auto_increment'
+	bureauProperties['name'] = 'varchar(256)'
+	bureauProperties['abbreviation'] = 'varchar(3)'
+	bureauProperties['active']       = 'bit(1)'
+	# ABMCreator('Bureau', 'Bureaux', bureauProperties).fullABM().execute()
 
-requirementTypeProperties = {}
-requirementTypeProperties['id'] = 'integer not null auto_increment'
-requirementTypeProperties['name'] = 'varchar(30)'
-# ABMCreator('RequirementType', 'RequirementTypes', requirementTypeProperties).fullABMWithBootrapHtml().execute()
+	speakerThemeProperties = {}
+	speakerThemeProperties['id'] = 'integer not null auto_increment'
+	speakerThemeProperties['speakerId'] = 'integer'
+	speakerThemeProperties['themeId']   = 'integer'
+	# ABMCreator('SpeakerTheme', 'SpeakerThemes', speakerThemeProperties).dbTableFile().execute()
 
-speakerRequirementProperties = {}
-speakerRequirementProperties['id'] = 'integer not null auto_increment'
-speakerRequirementProperties['speakerId']   = 'integer'
-speakerRequirementProperties['typeId']      = 'integer'
-speakerRequirementProperties['description'] = 'varchar(200)'
-# ABMCreator('SpeakerRequirement', 'SpeakerRequirements', speakerRequirementProperties).dbTableFile().execute()
+	requirementTypeProperties = {}
+	requirementTypeProperties['id'] = 'integer not null auto_increment'
+	requirementTypeProperties['name'] = 'varchar(30)'
+	# ABMCreator('RequirementType', 'RequirementTypes', requirementTypeProperties).fullABM().execute()
 
-# ABMCreator('Event','Events',{}).onTheFlyChanges('Venue','Venues')
-# ABMCreator('Event','Events',{}).onTheFlyChanges('Contact','Contacts')
-# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Contact','Contacts')
-# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Speaker','Speakers')
-# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Sponsor','Sponsors')
-# ABMCreator('Sponsor','Sponsors',{}).onTheFlyChanges('Contact','Contacts')
-# ABMCreator('Contact','Contacts',{}).onTheFlyChanges('Bureau','Bureaux')
-# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Contact','Contacts')
-# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Theme','Themes')
-# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Requirement','Requirements')
-# ABMCreator('Venue','Venues',{}).onTheFlyChanges('Contact','Contacts')
+	speakerRequirementProperties = {}
+	speakerRequirementProperties['id'] = 'integer not null auto_increment'
+	speakerRequirementProperties['speakerId']   = 'integer'
+	speakerRequirementProperties['typeId']      = 'integer'
+	speakerRequirementProperties['description'] = 'varchar(200)'
+	# ABMCreator('SpeakerRequirement', 'SpeakerRequirements', speakerRequirementProperties).dbTableFile().execute()
 
-timezoneProperties = {}
-timezoneProperties['id'] = 'integer not null auto_increment'
-timezoneProperties['name']     = 'varchar(44)'
-timezoneProperties['timezone'] = 'varchar(30)'
-# ABMCreator('Timezone', 'Timezones', timezoneProperties).fullABMWithBootrapHtml().execute()
+	# ABMCreator('Event','Events',{}).onTheFlyChanges('Venue','Venues')
+	# ABMCreator('Event','Events',{}).onTheFlyChanges('Contact','Contacts')
+	# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Contact','Contacts')
+	# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Speaker','Speakers')
+	# ABMCreator('Subevent','Subevents',{}).onTheFlyChanges('Sponsor','Sponsors')
+	# ABMCreator('Sponsor','Sponsors',{}).onTheFlyChanges('Contact','Contacts')
+	# ABMCreator('Contact','Contacts',{}).onTheFlyChanges('Bureau','Bureaux')
+	# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Contact','Contacts')
+	# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Theme','Themes')
+	# ABMCreator('Speaker','Speakers',{}).onTheFlyChanges('Requirement','Requirements')
+	# ABMCreator('Venue','Venues',{}).onTheFlyChanges('Contact','Contacts')
 
-companionProperties = {}
-companionProperties['fromDate'] = 'timestamp'
-companionProperties['toDate']   = 'timestamp'
-companionProperties['price']    = 'numeric(10,2)'
-companionProperties['type']     = "enum('transfer', 'hotel', 'flight')"
-companionProperties['detail']   = 'varchar(30)'
-# ABMCreator('CompanionLogistic', 'CompanionLogistics', companionProperties).serviceFile().listHtmlFile().listControllerFile().execute()
+	timezoneProperties = {}
+	timezoneProperties['id'] = 'integer not null auto_increment'
+	timezoneProperties['name']     = 'varchar(44)'
+	timezoneProperties['timezone'] = 'varchar(30)'
+	# ABMCreator('Timezone', 'Timezones', timezoneProperties).fullABM().execute()
 
-countryProperties = {}
-countryProperties['code'] = 'varchar(3)'
-countryProperties['name'] = 'varchar(100)'
-countryProperties['iso_3166_1_alpha_2_code'] = 'varchar(2)'
-# ABMCreator('Country', 'Countries', countryProperties).fullABMWithBootrapHtml().execute()
+	companionProperties = {}
+	companionProperties['fromDate'] = 'timestamp'
+	companionProperties['toDate']   = 'timestamp'
+	companionProperties['price']    = 'numeric(10,2)'
+	companionProperties['type']     = "enum('transfer', 'hotel', 'flight')"
+	companionProperties['detail']   = 'varchar(30)'
+	# ABMCreator('CompanionLogistic', 'CompanionLogistics', companionProperties).serviceFile().listHtmlFile().listControllerFile().execute()
 
-idTypesProperties = {}
-idTypesProperties['id']   = 'integer not null auto_increment'
-idTypesProperties['name'] = 'varchar(20)'
-# ABMCreator('IdType', 'IdTypes', idTypesProperties).fullABMWithBootrapHtml().execute()
+	countryProperties = {}
+	countryProperties['code'] = 'varchar(3)'
+	countryProperties['name'] = 'varchar(100)'
+	countryProperties['iso_3166_1_alpha_2_code'] = 'varchar(2)'
+	# ABMCreator('Country', 'Countries', countryProperties).fullABM().execute()
 
-# ABMCreator('EventHome', 'EventsHome', {}).listControllerFile().listHtmlFile().execute()
+	idTypesProperties = {}
+	idTypesProperties['id']   = 'integer not null auto_increment'
+	idTypesProperties['name'] = 'varchar(20)'
+	# ABMCreator('IdType', 'IdTypes', idTypesProperties).fullABM().execute()
+
+	# ABMCreator('EventHome', 'EventsHome', {}).listControllerFile().listHtmlFile().execute()
