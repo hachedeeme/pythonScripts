@@ -107,6 +107,16 @@ class ModelFile(ABMFile):
 
 
 # =============================
+# Backend Dto
+# ============================================================================================================
+
+class DtoFile(ABMFile):
+    def __init__(self, className, pluralName, properties, foreignProperties):
+        ABMFile.__init__(self, className, pluralName, 'backend_dto')
+        self.path = config['backend']['dtos'] + className + '.php'
+
+
+# =============================
 # Backend List Form
 # ============================================================================================================
 
@@ -477,8 +487,12 @@ class ABMCreator(object):
         self.files.append(ControllerFile(self.class_name, self.plural_name))
         return self
 
+    def dtoFile(self):
+        self.files.append(DtoFile(self.class_name, self.plural_name, self.properties, self.foreignProperties))
+        return self
+
     def backendABM(self):
-        return self.modelFile().dbTableFile().formListFile().formEditFile().controllerFile()
+        return self.modelFile().dbTableFile().dtioFile().formListFile().formEditFile().controllerFile()
 
     # ======================================================
     # === Frontend files
@@ -625,7 +639,31 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
 
 if __name__ == "__main__":
     eventProperties = {}
-    eventProperties['id']           = 'integer not null auto_increment'
-    eventProperties['title']        = 'varchar(100) DEFAULT NULL'
-    eventProperties['description']  = 'text'
+    eventProperties['id']               = 'integer not null auto_increment'
+    eventProperties['title']            = 'varchar(100) DEFAULT NULL'
+    eventProperties['description']      = 'text'
+    eventProperties['link']             = 'varchar(255) DEFAULT NULL'
+    eventProperties['city']             = 'varchar(50) NOT NULL'
+    eventProperties['location']         = 'varchar(255) NOT NULL'
+    eventProperties['image']            = 'varchar(255) DEFAULT NULL'
+    eventProperties['country_code']     = 'varchar(3) DEFAULT NULL'
+    eventProperties['event_type_id']    = 'int(11) DEFAULT NULL'
+    eventProperties['timezone']         = 'varchar(3) NOT NULL'
+    eventProperties['start_date']       = 'date DEFAULT NULL'
+    eventProperties['end_date']         = 'date DEFAULT NULL'
+    eventProperties['start_hour']       = 'varchar(5) DEFAULT NULL'
+    eventProperties['end_hour']         = 'varchar(5) DEFAULT NULL'
+    eventProperties['creationDate']     = 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+
+    speakerProperties = {
+        # TODO
+    }
+
+    foreignProperties = [
+        ABMCreator('Detail', 'Details'),
+        ABMCreator('Speaker', 'Speakers', speakerProperties).dbTableFile().dtoFile()
+    ]
+
+
     ABMCreator('Event', 'Events', eventProperties).backendABM().execute()
+
