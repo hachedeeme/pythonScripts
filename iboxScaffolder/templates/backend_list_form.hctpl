@@ -1,0 +1,12 @@
+<?php
+
+class Teleperformance_Form_{{{upper_plural_name}}}List extends Teleperformance_Form_PaginatedList {
+     
+{{{form_variables}}}
+    public function init() {
+        parent::init();
+        
+{{{form_elements}}}
+    }
+    
+}

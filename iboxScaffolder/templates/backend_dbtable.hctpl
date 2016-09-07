@@ -1,0 +1,8 @@
+<?php
+
+{{{table}}}
+class Teleperformance_Model_DbTable_{{{upper_name}}} extends Turisweb_Db_Table_Abstract {
+
+    protected $_name = '{{{table_name}}}';
+    
+}

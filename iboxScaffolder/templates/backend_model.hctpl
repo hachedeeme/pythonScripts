@@ -1,0 +1,54 @@
+<?php
+class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
+  
+  /**
+   * @var Teleperformance_Model_DbTable_{{{upper_name}}}
+   */
+  private $_{{{lower_name}}}DbTable;
+  
+  function __construct() {
+    $this->_{{{lower_name}}}DbTable = new Teleperformance_Model_DbTable_{{{upper_name}}}();
+  }
+  
+  public function fetchAll() {
+    ${{{lower_plural_name}}} = $this->_{{{lower_name}}}DbTable->fetchAll();
+    ${{{lower_plural_name}}}Dto = array();
+    foreach (${{{lower_plural_name}}} as ${{{lower_name}}}Row) {
+      array_push(${{{lower_plural_name}}}Dto, new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row));
+    }
+    return ${{{lower_plural_name}}}Dto;
+  }
+
+  public function fetchById($id) {
+    ${{{lower_name}}}Row = $this->_{{{lower_name}}}DbTable->fetchById($id);
+    if (${{{lower_name}}}Row === null) {
+      throw new Turisweb_Db_DataNotFoundException();
+    }
+    return new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row);
+  } 
+
+  public function insert(array $data){
+    $this->_{{{lower_name}}}DbTable->insert($data);
+  }
+
+  public function update(array $data){
+    return $this->_{{{lower_name}}}DbTable->update($data, ));
+  }
+
+  public function deleteById($id){
+      return $this->_{{{lower_name}}}DbTable->deleteById($id);
+  }
+  
+  public function fetchByFilters(array $data) {
+    ${{{lower_name}}} = $this->_{{{lower_name}}}DbTable->fetchByFilter($data);
+    ${{{lower_plural_name}}}Dto = array();
+    foreach (${{{lower_name}}} as ${{{lower_name}}}Row) {
+      array_push(${{{lower_plural_name}}}Dto, new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row));
+    }
+    return ${{{lower_plural_name}}}Dto;
+  }
+
+  public function fetchNumberOfRowsByFilters(array $data) {
+    return $this->_{{{lower_name}}}DbTable->fetchNumberOfRowsByFilter($data);
+  }
+}

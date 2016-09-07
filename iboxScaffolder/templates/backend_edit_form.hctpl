@@ -1,0 +1,10 @@
+<?php
+
+class Teleperformance_Form_{{{upper_name}}}Edit extends Zend_Form {
+
+{{{form_variables}}}
+    public function init() {
+{{{form_elements}}}
+    }
+    
+}

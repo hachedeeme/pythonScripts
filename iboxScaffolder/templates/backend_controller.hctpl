@@ -1,0 +1,83 @@
+<?php
+class Teleperformance_{{{upper_plural_name}}}Controller extends Turisweb_Rest_Controller {
+
+  /**
+   * @var Teleperformance_Model_{{{upper_name}}}
+   */
+  private $_{{{lower_name}}}Model;
+  
+  public function init() {
+    $this->_{{{lower_name}}}Model = new Teleperformance_Model_{{{upper_name}}}();
+  }
+  
+  public function indexAction() {
+    $form = new Teleperformance_Form_{{{upper_plural_name}}}List();
+    if ($form->isValid($this->_getAllParams())) {
+      $this->view->{{{snake_plural_name}}} = $this->_{{{lower_name}}}Model->fetchByFilters($form->getValues());
+      $this->view->numberOfRows = $this->_{{{lower_name}}}Model->fetchNumberOfRowsByFilters($form->getValues());
+    } else {
+      $this->view->error = $form->getMessages();
+      $this->getResponse()->setHttpResponseCode(400);
+    }
+  }
+  
+  public function getAction() {
+    $id = $this->_getParam('id', '');
+    if (!empty($id)) {
+      try {
+        $this->view->{{{snake_name}}} = $this->_{{{lower_name}}}Model->fetchById($id);
+        $this->getResponse()->setHttpResponseCode(200);
+                
+      } catch (Turisweb_Db_DataNotFoundException $e) {
+          $this->getResponse()->setHttpResponseCode(404);
+      
+      } catch (Exception $e) {
+          $this->getResponse()->setHttpResponseCode(503);
+      }
+    } else {
+      $this->getResponse()->setHttpResponseCode(400);
+    }
+  }
+  
+  public function postAction() {
+    $form = new Teleperformance_Form_{{{upper_name}}}Edit();
+    if ($form->isValid($this->_getAllParams())) {
+      try {
+        $this->_{{{lower_name}}}Model->insert($form->getValues());
+        $this->getResponse()->setHttpResponseCode(200);
+      } catch (Exception $e) {
+        $this->getResponse()->setHttpResponseCode(500);
+      }
+    } else {
+      $this->view->error = $form->getErrorMessages();
+      $this->getResponse()->setHttpResponseCode(503);
+    }
+  }
+
+  public function putAction() {
+    $form = new Teleperformance_Form_{{{upper_name}}}Edit();
+    if ($form->isValid($this->_getAllParams())) {
+      $this->_{{{lower_name}}}Model->update($form->getValues());
+      $this->getResponse()->setHttpResponseCode(200);
+    } else {
+      $this->view->error = $form->getErrorMessages();
+      $this->getResponse()->setHttpResponseCode(503);
+    }
+  }
+  
+  public function deleteAction(){
+    $id = $this->_getParam('id', '');
+    if (!empty($id)){
+      try {
+        $this->_{{{lower_name}}}Model->deleteById($id);
+        $this->getResponse()->setHttpResponseCode(200);
+      } catch (Turisweb_Db_DataNotFoundException $e) {
+        $this->getResponse()->setHttpResponseCode(404);
+      } catch (Exception $e) {
+        $this->getResponse()->setHttpResponseCode(423);
+      }
+    } else {
+      $this->getResponse()->setHttpResponseCode(400);
+    }
+  }
+}
