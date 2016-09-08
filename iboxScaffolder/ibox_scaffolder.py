@@ -91,7 +91,7 @@ class ABMFormFile(ABMFile):
 # ============================================================================================================
 
 class ControllerFile(ABMFile):
-    def __init__(self, className, pluralName):
+    def __init__(self, className, pluralName, foreignProperties):
         ABMFile.__init__(self, className, pluralName, 'backend_controller')
         self.path = config['backend']['controllers'] + pluralName + 'Controller.php'
 
@@ -101,7 +101,7 @@ class ControllerFile(ABMFile):
 # ============================================================================================================
 
 class ModelFile(ABMFile):
-    def __init__(self, className, pluralName):
+    def __init__(self, className, pluralName, foreignProperties):
         ABMFile.__init__(self, className, pluralName, 'backend_model')
         self.path = config['backend']['models'] + className + '.php'
 
@@ -131,7 +131,7 @@ class FormListFile(ABMFormFile):
 # ============================================================================================================
 
 class FormEditFile(ABMFormFile):
-    def __init__(self, className, pluralName, properties):
+    def __init__(self, className, pluralName, properties, foreignProperties):
         ABMFormFile.__init__(self, className, pluralName, 'backend_edit_form', properties)
         self.path = config['backend']['forms'] + className + 'Edit.php'
 
@@ -458,17 +458,18 @@ class EditHtmlFile(ABMFile):
 # ============================================================================================================
 
 class ABMCreator(object):
-    def __init__(self, className, pluralName, properties = {}, tableName = None):
+    def __init__(self, className, pluralName, properties = {}, foreignProperties = {}, tableName = None):
         self.class_name  = className
         self.plural_name = pluralName
         self.files = []
         self.properties = properties
+        self.foreignProperties = foreignProperties
 
     # ======================================================
     # === Backend files
     # ======================================================
     def modelFile(self):
-        self.files.append(ModelFile(self.class_name, self.plural_name))
+        self.files.append(ModelFile(self.class_name, self.plural_name, self.foreignProperties))
         return self
 
     def dbTableFile(self):
@@ -480,11 +481,11 @@ class ABMCreator(object):
         return self
 
     def formEditFile(self):
-        self.files.append(FormEditFile(self.class_name, self.plural_name, self.properties))
+        self.files.append(FormEditFile(self.class_name, self.plural_name, self.properties, self.foreignProperties))
         return self
 
     def controllerFile(self):
-        self.files.append(ControllerFile(self.class_name, self.plural_name))
+        self.files.append(ControllerFile(self.class_name, self.plural_name, self.foreignProperties))
         return self
 
     def dtoFile(self):
@@ -492,7 +493,7 @@ class ABMCreator(object):
         return self
 
     def backendABM(self):
-        return self.modelFile().dbTableFile().dtioFile().formListFile().formEditFile().controllerFile()
+        return self.modelFile().dbTableFile().dtoFile().formListFile().formEditFile().controllerFile()
 
     # ======================================================
     # === Frontend files
@@ -638,32 +639,44 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
 # ============================================================================================================
 
 if __name__ == "__main__":
-    eventProperties = {}
-    eventProperties['id']               = 'integer not null auto_increment'
-    eventProperties['title']            = 'varchar(100) DEFAULT NULL'
-    eventProperties['description']      = 'text'
-    eventProperties['link']             = 'varchar(255) DEFAULT NULL'
-    eventProperties['city']             = 'varchar(50) NOT NULL'
-    eventProperties['location']         = 'varchar(255) NOT NULL'
-    eventProperties['image']            = 'varchar(255) DEFAULT NULL'
-    eventProperties['country_code']     = 'varchar(3) DEFAULT NULL'
-    eventProperties['event_type_id']    = 'int(11) DEFAULT NULL'
-    eventProperties['timezone']         = 'varchar(3) NOT NULL'
-    eventProperties['start_date']       = 'date DEFAULT NULL'
-    eventProperties['end_date']         = 'date DEFAULT NULL'
-    eventProperties['start_hour']       = 'varchar(5) DEFAULT NULL'
-    eventProperties['end_hour']         = 'varchar(5) DEFAULT NULL'
-    eventProperties['creationDate']     = 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    eventProperties = {
+        'id': 'integer not null auto_increment',
+        'title': 'varchar(100) DEFAULT NULL',
+        'description': 'text',
+        'link': 'varchar(255) DEFAULT NULL',
+        'city': 'varchar(50) NOT NULL',
+        'location': 'varchar(255) NOT NULL',
+        'image': 'varchar(255) DEFAULT NULL',
+        'country_code': 'varchar(3) DEFAULT NULL',
+        'event_type_id': 'int(11) DEFAULT NULL',
+        'timezone': 'varchar(3) NOT NULL',
+        'start_date': 'date DEFAULT NULL',
+        'end_date': 'date DEFAULT NULL',
+        'start_hour': 'varchar(5) DEFAULT NULL',
+        'end_hour': 'varchar(5) DEFAULT NULL',
+        'creationDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    }
+
+    detailProperties = {
+        'id': 'int(11) NOT NULL AUTO_INCREMENT',
+        'event_id': 'int(11) DEFAULT NULL',
+        'title': 'varchar(100) DEFAULT NULL',
+        'description': 'varchar(10000) DEFAULT NULL',
+        'start_date': 'date DEFAULT NULL',
+        'end_date': 'date DEFAULT NULL',
+        'start_hour': 'varchar(5) DEFAULT NULL',
+        'end_hour': 'varchar(5) DEFAULT NULL'
+    }
 
     speakerProperties = {
-        # TODO
+        'event_id': 'int(11) DEFAULT NULL',
+        'speaker_id': 'int(11) DEFAULT NULL',
+        'description': 'varchar(255) DEFAULT NULL'
     }
 
     foreignProperties = [
-        ABMCreator('Detail', 'Details'),
+        ABMCreator('Detail', 'Details', detailProperties).dbTableFile().dtoFile(),
         ABMCreator('Speaker', 'Speakers', speakerProperties).dbTableFile().dtoFile()
     ]
 
-
-    ABMCreator('Event', 'Events', eventProperties).backendABM().execute()
-
+    ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()
