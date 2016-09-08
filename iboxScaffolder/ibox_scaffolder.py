@@ -76,7 +76,7 @@ class ABMFormFile(ABMFile):
             formVariables += "    /**\n"
             formVariables += "     * @var Zend_Form_Element_Xhtml\n"
             formVariables += "     */\n"
-            formVariables += "    public $" + prop + ";\n\n"
+            formVariables += "    public $" + prop + ";\n"
         
             formElements += "        $this->" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
             formElements += "        $this->code->setLabel('" + prop + "');\n"
@@ -134,6 +134,68 @@ class FormEditFile(ABMFormFile):
     def __init__(self, className, pluralName, properties, foreignProperties):
         ABMFormFile.__init__(self, className, pluralName, 'backend_edit_form', properties)
         self.path = config['backend']['forms'] + className + 'Edit.php'
+        self.addForeignVariablesToken(foreignProperties);
+        self.addConstructorToken(foreignProperties);
+        self.addMethodsTokens(foreignProperties);
+
+    def addForeignVariablesToken(self, abms):
+        subforms = ""
+        counts   = ""
+        for abm in abms:
+            subforms += "    /**\n"
+            subforms += "     * @var Zend_Form_SubForm\n"
+            subforms += "     */\n"
+            subforms += "    public $" + firstToLowercase(abm.plural_name) + ";\n"
+
+            counts += "    /**\n"
+            counts += "     * @var int\n"
+            counts += "     */\n"
+            counts += "    protected $_numberOf" + abm.plural_name + ";\n"
+
+        self.templateTokens['form_foreign_variables'] = subforms + "\n" + counts
+
+    def addConstructorToken(self, abms):
+        constructorParams    = ""
+        variablesDeclaration = ""
+        first = True
+        for abm in abms:
+            constructorParams += "$numberOf" if first else ", $numberOf"
+            constructorParams += abm.plural_name
+            first = False
+            variablesDeclaration += "        $this->_numberOf" + abm.plural_name + " = $numberOf" + abm.plural_name + ";\n"
+
+        constructor = "function __construct(" + constructorParams + ") {\n" + variablesDeclaration
+        constructor += "        parent::__construct();\n"
+        constructor += "    }\n"
+
+        self.templateTokens['form_constructor'] = constructor
+
+    def addMethodsTokens(self, abms):
+        methods = ""
+        methodsDeclaration = ""
+        for abm in abms:
+            methods += "        $this->_init" + abm.plural_name  + "();\n"
+
+            propertiesDeclaration = ""
+            for prop in abm.properties.keys():
+                propertiesDeclaration += "            $" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
+                propertiesDeclaration += "            $" + prop + "->setLabel('" + prop + "');\n"
+                propertiesDeclaration += "            $subform->addElement('" + prop + "');\n\n"
+
+            methodsDeclaration += "    protected function _init" + abm.plural_name + "() {\n"
+            methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + " = new Zend_Form_SubForm();\n"
+            methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + "->setIsArray(true);\n\n"
+            methodsDeclaration += "        for ($i = 0; $i < $this->_numberOf" + abm.plural_name + "; $i++) {\n"
+            methodsDeclaration += "            $subform = new Zend_Form_SubForm();\n"
+            methodsDeclaration += "            $subform->setIsArray(true);\n\n"
+            methodsDeclaration += propertiesDeclaration
+            methodsDeclaration += "            $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform, $i);\n"
+            methodsDeclaration += "        }\n"
+            methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform, $i);\n"
+            methodsDeclaration += "    }\n\n"
+
+        self.templateTokens['form_foreign_methods'] = methods
+        self.templateTokens['form_foreign_methods_declaration'] = methodsDeclaration
 
 
 # =============================

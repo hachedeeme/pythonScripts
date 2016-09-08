@@ -3,8 +3,13 @@
 class Teleperformance_Form_{{{upper_name}}}Edit extends Zend_Form {
 
 {{{form_variables}}}
+{{{form_foreign_variables}}}
+
+    {{{form_constructor}}}
     public function init() {
 {{{form_elements}}}
+{{{form_foreign_methods}}}
     }
-    
+
+{{{form_foreign_methods_declaration}}}
 }
