@@ -1,4 +1,4 @@
-import os, re, config_parser
+import re, config_parser
 
 
 # =============================
@@ -27,9 +27,12 @@ def toRes(name):
 def contains(sub_string, string):
     return sub_string in string
 
-def replaceAllTokens(text, dic):
-    for i, j in dic.iteritems():
-        text = text.replace('{{{' + i + '}}}', j)
+def replaceAllTokens(text, tokens):
+    for token, replacement in tokens.iteritems():
+        if replacement:
+            text = text.replace('{{{' + token + '}}}', replacement)
+        else:
+            text = text.replace('{{{' + token + '}}}\n', '')
     return text
 
 # =============================
@@ -38,7 +41,6 @@ def replaceAllTokens(text, dic):
 
 class ABMFile():
     def __init__(self, className, pluralName, templateName):
-        self.code = ''
         self.templateName = config['metadata']['templates'] + templateName + '.' + config['metadata']['extension']
         self.class_name  = className
         self.plural_name = pluralName
@@ -58,10 +60,9 @@ class ABMFile():
 
     def execute(self):
         self.generateCode()
-        os.system('touch ' + self.path)
-        abm_file = open(self.path, 'w')
-        abm_file.write(self.code)
-        abm_file.close()
+        with open(self.path, 'w') as abmFile:
+            abmFile.write(self.code)
+        print("- GENERATED: " + self.path)
 
 class ABMFormFile(ABMFile):
     def __init__(self, className, pluralName, templateName, properties):
@@ -175,6 +176,8 @@ class DtoFile(ABMFile):
         for prop in foreignProperties:
             abm = prop.files[0]
             className = self.class_name + abm.class_name
+            lowerName = abm.templateTokens['lower_name']
+            lowerPluralName = abm.templateTokens['lower_plural_name']
 
             foreignDtosDeclarations += "    /**\n"
             foreignDtosDeclarations += "     * @var array Teleperformance_Model_Dto_" + className + "\n"
@@ -189,10 +192,12 @@ class DtoFile(ABMFile):
             foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
             foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + className + "();\n"
 
-            foreignDtosSet += "        $" + abm.templateTokens['lower_name'] + "Rows = $this->" + abm.templateTokens['lower_name'] + "DbTable->fetchAll(array('" + self.templateTokens['lower_name'] + "_id = ?' => $this->id));\n"
-            foreignDtosSet += "        $this->" + abm.templateTokens['lower_plural_name'] + " = array();\n"
-            foreignDtosSet += "        foreach ($" + abm.templateTokens['lower_name'] + "Rows as $" + abm.templateTokens['lower_name'] + "Row) {\n"
-            foreignDtosSet += "            array_push($this->" + abm.templateTokens['lower_plural_name'] + ", new Teleperformance_Model_Dto_" + self.class_name + abm.class_name + "($" + abm.templateTokens['lower_name'] + "Row));\n"
+            foreignDtosSet += "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
+            foreignDtosSet += "array('" + self.templateTokens['lower_name'] + "_id = ?' => $this->id));\n"
+            foreignDtosSet += "        $this->" + lowerPluralName + " = array();\n"
+            foreignDtosSet += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
+            foreignDtosSet += "            array_push($this->" + lowerPluralName + ", "
+            foreignDtosSet += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
             foreignDtosSet += "        }\n\n"
 
         self.templateTokens['foreign_dtos_declarations'] = foreignDtosDeclarations
@@ -714,9 +719,8 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
         print(code)
         
     def execute(self):
-        for abm_file in self.files:
-            abm_file.execute()
-            print("generated " + abm_file.path)
+        for abmFile in self.files + self.foreignProperties:
+            abmFile.execute()
 
 
 # =============================
