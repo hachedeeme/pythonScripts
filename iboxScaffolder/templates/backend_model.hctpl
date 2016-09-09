@@ -9,7 +9,7 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
 {{{foreign_dbtables_declarations}}}
   function __construct() {
     $this->_{{{lower_name}}}DbTable = new Teleperformance_Model_DbTable_{{{upper_name}}}();
-{{{foreign_dbtables_instantiation}}}
+{{{foreign_dbtables_instantiations}}}
   }
   
   public function fetchAll() {

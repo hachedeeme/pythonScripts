@@ -108,7 +108,7 @@ class ModelFile(ABMFile):
 
     def addForeignTokens(self, foreignProperties):
         foreignDbtablesDeclarations = ""
-        foreignDbtablesInstantiation = ""
+        foreignDbtablesInstantiations = ""
         foreignUnsets = ""
         foreignInserts = ""
         foreignUpdates = ""
@@ -124,8 +124,8 @@ class ModelFile(ABMFile):
             foreignDbtablesDeclarations += "   */\n"
             foreignDbtablesDeclarations += "  private $_" + combinedLowerName + "DbTable;\n\n"
 
-            foreignDbtablesInstantiation += "    $this->_" + combinedLowerName + "DbTable = "
-            foreignDbtablesInstantiation += "new Teleperformance_Model_DbTable_" + combinedUpperName + "();\n"
+            foreignDbtablesInstantiations += "    $this->_" + combinedLowerName + "DbTable = "
+            foreignDbtablesInstantiations += "new Teleperformance_Model_DbTable_" + combinedUpperName + "();\n"
 
             foreignUnsets += "    $" + lowerPluralName + " = $data['" + lowerPluralName + "'];\n"
             foreignUnsets += "    unset($data['" + lowerPluralName + "']);\n\n"
@@ -137,7 +137,7 @@ class ModelFile(ABMFile):
             foreignUpdates += self.templateTokens['lower_name'] + "_id', $data['id'], $" + lowerPluralName + ");\n"
 
         self.templateTokens['foreign_dbtables_declarations'] = foreignDbtablesDeclarations
-        self.templateTokens['foreign_dbtables_instantiation'] = foreignDbtablesInstantiation
+        self.templateTokens['foreign_dbtables_instantiations'] = foreignDbtablesInstantiations
         self.templateTokens['foreign_unsets'] = foreignUnsets
         self.templateTokens['foreign_inserts'] = foreignInserts
         self.templateTokens['foreign_updates'] = foreignUpdates
@@ -173,31 +173,32 @@ class DtoFile(ABMFile):
         foreignDbtablesSet = ""
         foreignDtosSet = ""
 
+        selfLowerName = self.templateTokens['lower_name']
         for prop in foreignProperties:
             abm = prop.files[0]
-            className = self.class_name + abm.class_name
+            combinedClassName = self.class_name + abm.class_name
             lowerName = abm.templateTokens['lower_name']
             lowerPluralName = abm.templateTokens['lower_plural_name']
 
             foreignDtosDeclarations += "    /**\n"
-            foreignDtosDeclarations += "     * @var array Teleperformance_Model_Dto_" + className + "\n"
+            foreignDtosDeclarations += "     * @var array Teleperformance_Model_Dto_" + combinedClassName + "\n"
             foreignDtosDeclarations += "     */\n"
             foreignDtosDeclarations += "    public $" + abm.templateTokens['lower_plural_name'] + ";\n\n"
 
             foreignDbTablesDeclarations += "    /**\n"
-            foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + className + "\n"
+            foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + combinedClassName + "\n"
             foreignDbTablesDeclarations += "     */\n"
             foreignDbTablesDeclarations += "    private $" + abm.templateTokens['lower_name'] + "DbTable;\n\n"
 
             foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
-            foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + className + "();\n"
+            foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + combinedClassName + "();\n"
 
             foreignDtosSet += "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
-            foreignDtosSet += "array('" + self.templateTokens['lower_name'] + "_id = ?' => $this->id));\n"
+            foreignDtosSet += "array('" + selfLowerName + "_id = ?' => $" + selfLowerName + "Row->id));\n"
             foreignDtosSet += "        $this->" + lowerPluralName + " = array();\n"
             foreignDtosSet += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
             foreignDtosSet += "            array_push($this->" + lowerPluralName + ", "
-            foreignDtosSet += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
+            foreignDtosSet += "new Teleperformance_Model_Dto_" + combinedClassName + "($" + lowerName + "Row));\n"
             foreignDtosSet += "        }\n\n"
 
         self.templateTokens['foreign_dtos_declarations'] = foreignDtosDeclarations
