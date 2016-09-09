@@ -176,29 +176,29 @@ class DtoFile(ABMFile):
         selfLowerName = self.templateTokens['lower_name']
         for prop in foreignProperties:
             abm = prop.files[0]
-            combinedClassName = self.class_name + abm.class_name
+            className = abm.class_name
             lowerName = abm.templateTokens['lower_name']
             lowerPluralName = abm.templateTokens['lower_plural_name']
 
             foreignDtosDeclarations += "    /**\n"
-            foreignDtosDeclarations += "     * @var array Teleperformance_Model_Dto_" + combinedClassName + "\n"
+            foreignDtosDeclarations += "     * @var array Teleperformance_Model_Dto_" + className + "\n"
             foreignDtosDeclarations += "     */\n"
             foreignDtosDeclarations += "    public $" + abm.templateTokens['lower_plural_name'] + ";\n\n"
 
             foreignDbTablesDeclarations += "    /**\n"
-            foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + combinedClassName + "\n"
+            foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + className + "\n"
             foreignDbTablesDeclarations += "     */\n"
             foreignDbTablesDeclarations += "    private $" + abm.templateTokens['lower_name'] + "DbTable;\n\n"
 
             foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
-            foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + combinedClassName + "();\n"
+            foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + className + "();\n"
 
             foreignDtosSet += "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
             foreignDtosSet += "array('" + selfLowerName + "_id = ?' => $" + selfLowerName + "Row->id));\n"
             foreignDtosSet += "        $this->" + lowerPluralName + " = array();\n"
             foreignDtosSet += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
             foreignDtosSet += "            array_push($this->" + lowerPluralName + ", "
-            foreignDtosSet += "new Teleperformance_Model_Dto_" + combinedClassName + "($" + lowerName + "Row));\n"
+            foreignDtosSet += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
             foreignDtosSet += "        }\n\n"
 
         self.templateTokens['foreign_dtos_declarations'] = foreignDtosDeclarations
@@ -718,7 +718,7 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
         code = code.replace('UrlPLURALNAME', toRes(self.plural_name))
         code = code.replace('SnakePLURALNAME', toSnakeCase(self.plural_name))
         print(code)
-        
+
     def execute(self):
         for abmFile in self.files + self.foreignProperties:
             abmFile.execute()
@@ -765,8 +765,8 @@ if __name__ == "__main__":
     }
 
     foreignProperties = [
-        ABMCreator('Detail', 'Details', detailProperties).dbTableFile().dtoFile(),
-        ABMCreator('Speaker', 'Speakers', speakerProperties).dbTableFile().dtoFile()
+        ABMCreator('EventDetail', 'EventDetails', detailProperties).dbTableFile().dtoFile(),
+        ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties).dbTableFile().dtoFile()
     ]
 
     ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()
