@@ -269,34 +269,29 @@ class FormEditFile(ABMFormFile):
         for abm in abms:
             methods += "        $this->_init" + abm.plural_name  + "();\n"
 
-            propertiesDeclaration = ""
-            for prop in abm.properties.keys():
-                propertiesDeclaration += "            $" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
-                propertiesDeclaration += "            $" + prop + "->setLabel('" + prop + "');\n"
-                propertiesDeclaration += "            $subform->addElement('" + prop + "');\n\n"
-
             methodsDeclaration += "    protected function _init" + abm.plural_name + "() {\n"
             methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + " = new Zend_Form_SubForm();\n"
             methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + "->setIsArray(true);\n\n"
-            methodsDeclaration += "        for ($i = 0; $i < $this->_numberOf" + abm.plural_name + "; $i++) {\n"
-            methodsDeclaration += "            $subform = new Zend_Form_SubForm();\n"
-            methodsDeclaration += "            $subform->setIsArray(true);\n\n"
-            methodsDeclaration += propertiesDeclaration
 
-            methodsDeclaration += "            $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform, $i);\n"
+            methodsDeclaration += self.foreignPropertiesDeclaration(abm, '    ', 0)
+
+            methodsDeclaration += "            $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform0, $i);\n"
             methodsDeclaration += "        }\n"
-            methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform, $i);\n"
+            methodsDeclaration += "        $this->addSubForm($this->" + firstToLowercase(abm.plural_name) + ", '" + firstToLowercase(abm.plural_name) + "');\n"
+            # methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform0, $i);\n"
             methodsDeclaration += "    }\n\n"
 
         self.templateTokens['form_foreign_methods'] = methods
         self.templateTokens['form_foreign_methods_declaration'] = methodsDeclaration
 
 
-    def foreignPropertiesDeclaration(self, tabs, deep, abms):
-    if not abms:
-        return ""
-    else:
-        return func(l[0]) + foldS(func, l[1:])
+    def foreignPropertiesDeclarationList(self, tab, deep, abms):
+        if not abms:
+            return ""
+        else:
+            methodsDeclaration =  (tab*deep) + "            $subform" + str(deep-1) + "->addSubForm($subform" + str(deep) + ", $i);\n"
+            methodsDeclaration += (tab*deep) + "        }\n"
+            return self.foreignPropertiesDeclaration(abms[0], tab, deep) + methodsDeclaration + self.foreignPropertiesDeclarationList(tab, deep, abms[1:])
 
     def foreignPropertiesDeclaration(self, abm, tab, deep):
         methodsDeclaration = ""
@@ -304,14 +299,17 @@ class FormEditFile(ABMFormFile):
         for prop in abm.properties.keys():
             propertiesDeclaration += (tab*deep) + "            $" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
             propertiesDeclaration += (tab*deep) + "            $" + prop + "->setLabel('" + prop + "');\n"
-            propertiesDeclaration += (tab*deep) + "            $subform->addElement('" + prop + "');\n\n"
-
+            propertiesDeclaration += (tab*deep) + "            $subform" + str(deep) + "->addElement('" + prop + "');\n\n"
 
         methodsDeclaration += (tab*deep) + "        for ($i = 0; $i < $this->_numberOf" + abm.plural_name + "; $i++) {\n"
-        methodsDeclaration += (tab*deep) + "            $subform = new Zend_Form_SubForm();\n"
-        methodsDeclaration += (tab*deep) + "            $subform->setIsArray(true);\n\n"
+        methodsDeclaration += (tab*deep) + "            $subform" + str(deep) + " = new Zend_Form_SubForm();\n"
+        methodsDeclaration += (tab*deep) + "            $subform" + str(deep) + "->setIsArray(true);\n\n"
         methodsDeclaration += propertiesDeclaration
-        return methodsDeclaration + 
+
+        
+        # methodsDeclaration += (tab*deep) + "        $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform, $i);\n"
+        # methodsDeclaration += (tab*deep) + "    }\n"
+        return methodsDeclaration + self.foreignPropertiesDeclarationList(tab, deep+1, abm.foreignProperties)
 
 
     def declareCountVariable(self, abm):
@@ -867,17 +865,17 @@ if __name__ == "__main__":
     }
 
     detailFProperties = [
-        ABMCreator('FirstDetailProperty', 'FirstDetailProperties', {'id': "integer", 'aaaaaa': "integer"}),
-        ABMCreator('SecondDetailProperty', 'SecondDetailProperties', {'id': "integer", 'bbbbbb': "integer"})
+        ABMCreator('FirstDetailProperty', 'FirstDetailProperties', {'id': "integer", 'aaaaaa': "integer"}).dbTableFile(),
+        ABMCreator('SecondDetailProperty', 'SecondDetailProperties', {'id': "integer", 'bbbbbb': "integer"}).dbTableFile()
     ]
 
     speakersFProperties = [
-        ABMCreator('FirstSpeakerProperty', 'FirstSpeakerProperties', {'id': "integer", 'cccccc': "integer"}),
+        ABMCreator('FirstSpeakerProperty', 'FirstSpeakerProperties', {'id': "integer", 'cccccc': "integer"}, detailFProperties).dbTableFile(),
     ]
 
     foreignProperties = [
         ABMCreator('EventDetail', 'EventDetails', detailProperties).dbTableFile().dtoFile(),
-        ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties).dbTableFile().dtoFile()
+        ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties, speakersFProperties).dbTableFile().dtoFile()
     ]
 
     ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()
