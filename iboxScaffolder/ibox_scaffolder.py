@@ -1,4 +1,4 @@
-import os, re, config_parser
+import re, config_parser
 
 
 # =============================
@@ -33,9 +33,12 @@ def toRes(name):
 def contains(sub_string, string):
     return sub_string in string
 
-def replaceAllTokens(text, dic):
-    for i, j in dic.iteritems():
-        text = text.replace('{{{' + i + '}}}', j)
+def replaceAllTokens(text, tokens):
+    for token, replacement in tokens.iteritems():
+        if replacement:
+            text = text.replace('{{{' + token + '}}}', replacement)
+        else:
+            text = text.replace('{{{' + token + '}}}\n', '')
     return text
 
 # =============================
@@ -44,18 +47,16 @@ def replaceAllTokens(text, dic):
 
 class ABMFile():
     def __init__(self, className, pluralName, templateName):
-        self.code = ''
         self.templateName = config['metadata']['templates'] + templateName + '.' + config['metadata']['extension']
         self.class_name  = className
         self.plural_name = pluralName
-        self.snakePluralName = toSnakeCase(self.plural_name)
         self.templateTokens = {
             'upper_name'        : self.class_name,
             'lower_name'        : firstToLowercase(self.class_name),
             'snake_name'        : toSnakeCase(self.class_name),
             'upper_plural_name' : self.plural_name,
             'lower_plural_name' : firstToLowercase(self.plural_name),
-            'snake_plural_name' : self.snakePluralName
+            'snake_plural_name' : toSnakeCase(self.plural_name)
         }
 
     def generateCode(self):
@@ -65,10 +66,9 @@ class ABMFile():
 
     def execute(self):
         self.generateCode()
-        os.system('touch ' + self.path)
-        abm_file = open(self.path, 'w')
-        abm_file.write(self.code)
-        abm_file.close()
+        with open(self.path, 'w') as abmFile:
+            abmFile.write(self.code)
+        print("- GENERATED: " + self.path)
 
 class ABMFormFile(ABMFile):
     def __init__(self, className, pluralName, templateName, properties):
@@ -110,6 +110,43 @@ class ModelFile(ABMFile):
     def __init__(self, className, pluralName, foreignProperties):
         ABMFile.__init__(self, className, pluralName, 'backend_model')
         self.path = config['backend']['models'] + className + '.php'
+        self.addForeignTokens(foreignProperties)
+
+    def addForeignTokens(self, foreignProperties):
+        foreignDbtablesDeclarations = ""
+        foreignDbtablesInstantiations = ""
+        foreignUnsets = ""
+        foreignInserts = ""
+        foreignUpdates = ""
+
+        for prop in foreignProperties:
+            abm = prop.files[0]
+            combinedUpperName = self.class_name + abm.templateTokens['upper_name']
+            combinedLowerName = self.templateTokens['lower_name'] + abm.templateTokens['upper_name']
+            lowerPluralName = abm.templateTokens['lower_plural_name']
+
+            foreignDbtablesDeclarations += "  /**\n"
+            foreignDbtablesDeclarations += "   * @var Teleperformance_Model_DbTable_" + combinedUpperName + "\n"
+            foreignDbtablesDeclarations += "   */\n"
+            foreignDbtablesDeclarations += "  private $_" + combinedLowerName + "DbTable;\n\n"
+
+            foreignDbtablesInstantiations += "    $this->_" + combinedLowerName + "DbTable = "
+            foreignDbtablesInstantiations += "new Teleperformance_Model_DbTable_" + combinedUpperName + "();\n"
+
+            foreignUnsets += "    $" + lowerPluralName + " = $data['" + lowerPluralName + "'];\n"
+            foreignUnsets += "    unset($data['" + lowerPluralName + "']);\n\n"
+
+            foreignInserts += "    $this->saveRelated($this->_" + combinedLowerName + "DbTable, '"
+            foreignInserts += self.templateTokens['lower_name'] + "_id', $id, $" + lowerPluralName + ");\n"
+
+            foreignUpdates += "    $this->saveRelated($this->_" + combinedLowerName + "DbTable, '"
+            foreignUpdates += self.templateTokens['lower_name'] + "_id', $data['id'], $" + lowerPluralName + ");\n"
+
+        self.templateTokens['foreign_dbtables_declarations'] = foreignDbtablesDeclarations
+        self.templateTokens['foreign_dbtables_instantiations'] = foreignDbtablesInstantiations
+        self.templateTokens['foreign_unsets'] = foreignUnsets
+        self.templateTokens['foreign_inserts'] = foreignInserts
+        self.templateTokens['foreign_updates'] = foreignUpdates
 
 
 # =============================
@@ -117,10 +154,64 @@ class ModelFile(ABMFile):
 # ============================================================================================================
 
 class DtoFile(ABMFile):
+    # TODO permitir DTOs que inflan referencias de 1 objeto, no solo de array
     def __init__(self, className, pluralName, properties, foreignProperties):
         ABMFile.__init__(self, className, pluralName, 'backend_dto')
         self.path = config['backend']['dtos'] + className + '.php'
+        self.addPropertiesTokens(properties)
+        self.addForeignPropertiesTokens(foreignProperties)
 
+    def addPropertiesTokens(self, properties):
+        propertiesDeclarations = ""
+        propertiesSet = ""
+
+        for prop in properties.keys():
+            propertiesDeclarations += "    public $" + prop + ";\n"
+
+            propertiesSet += "        $this->" + prop + " = $" + self.templateTokens['lower_name'] + "Row->" + prop + ";\n"
+
+        self.templateTokens['properties_declarations'] = propertiesDeclarations
+        self.templateTokens['properties_set'] = propertiesSet
+
+    def addForeignPropertiesTokens(self, foreignProperties):
+        foreignDtosDeclarations = ""
+        foreignDbTablesDeclarations = ""
+        foreignDbtablesSet = ""
+        foreignDtosSet = ""
+
+        selfLowerName = self.templateTokens['lower_name']
+        for prop in foreignProperties:
+            abm = prop.files[0]
+            className = abm.class_name
+            lowerName = abm.templateTokens['lower_name']
+            lowerPluralName = abm.templateTokens['lower_plural_name']
+
+            foreignDtosDeclarations += "    /**\n"
+            foreignDtosDeclarations += "     * @var array Teleperformance_Model_Dto_" + className + "\n"
+            foreignDtosDeclarations += "     */\n"
+            foreignDtosDeclarations += "    public $" + abm.templateTokens['lower_plural_name'] + ";\n\n"
+
+            foreignDbTablesDeclarations += "    /**\n"
+            foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + className + "\n"
+            foreignDbTablesDeclarations += "     */\n"
+            foreignDbTablesDeclarations += "    private $" + abm.templateTokens['lower_name'] + "DbTable;\n\n"
+
+            foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
+            foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + className + "();\n"
+
+            foreignDtosSet += "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
+            foreignDtosSet += "array('" + selfLowerName + "_id = ?' => $" + selfLowerName + "Row->id));\n"
+            foreignDtosSet += "        $this->" + lowerPluralName + " = array();\n"
+            foreignDtosSet += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
+            foreignDtosSet += "            array_push($this->" + lowerPluralName + ", "
+            foreignDtosSet += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
+            foreignDtosSet += "        }\n\n"
+
+        self.templateTokens['foreign_dtos_declarations'] = foreignDtosDeclarations
+        self.templateTokens['foreign_dbtables_declarations'] = foreignDbTablesDeclarations
+        self.templateTokens['foreign_dbtables_set'] = foreignDbtablesSet
+        self.templateTokens['foreign_dtos_set'] = foreignDtosSet
+        
 
 # =============================
 # Backend List Form
@@ -246,13 +337,13 @@ class DBTableFile(ABMFile):
     def __init__(self, className, pluralName, properties = {}, tableName = None):
         ABMFile.__init__(self, className, pluralName, 'backend_dbtable')
         self.path = config['backend']['dbtables'] + className + '.php'
-        self.tableName = tableName if tableName else self.snakePluralName
+        self.tableName = tableName if tableName else self.templateTokens['snake_plural_name']
         self.templateTokens['table_name'] = self.tableName
         self.addTableToken(properties)
 
     def addTableToken(self, properties):
         tableToken = "/**\n"
-        tableToken += ("create table " + toSnakeCase(self.plural_name) + " (\n")
+        tableToken += ("create table " + self.templateTokens['snake_plural_name'] + " (\n")
         for key in properties.keys():
             tableToken += ("  " + key + " " + properties[key] + ",\n")
         tableToken += ("  primary key (id)\n")
@@ -729,11 +820,10 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
         code = code.replace('UrlPLURALNAME', toRes(self.plural_name))
         code = code.replace('SnakePLURALNAME', toSnakeCase(self.plural_name))
         print(code)
-        
+
     def execute(self):
-        for abm_file in self.files:
-            abm_file.execute()
-            print("generated " + abm_file.path)
+        for abmFile in self.files + self.foreignProperties:
+            abmFile.execute()
 
 
 # =============================
@@ -786,8 +876,13 @@ if __name__ == "__main__":
     ]
 
     foreignProperties = [
+<<<<<<< HEAD
         ABMCreator('Detail', 'Details', detailProperties, detailFProperties).dbTableFile().dtoFile(),
         ABMCreator('Speaker', 'Speakers', speakerProperties, speakersFProperties).dbTableFile().dtoFile()
+=======
+        ABMCreator('EventDetail', 'EventDetails', detailProperties).dbTableFile().dtoFile(),
+        ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties).dbTableFile().dtoFile()
+>>>>>>> 0069e2c64985f7c6502ff7832c13ba13583fad24
     ]
 
     ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()

@@ -1,0 +1,13 @@
+<?php
+
+class Teleperformance_Model_Dto_{{{upper_name}}} {
+
+{{{properties_declarations}}}
+{{{foreign_dtos_declarations}}}
+{{{foreign_dbtables_declarations}}}
+    public function __construct(Zend_Db_Table_Row ${{{lower_name}}}Row) {
+{{{properties_set}}}
+{{{foreign_dbtables_set}}}
+{{{foreign_dtos_set}}}
+    }
+}

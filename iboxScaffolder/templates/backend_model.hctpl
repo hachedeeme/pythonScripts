@@ -5,9 +5,11 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
    * @var Teleperformance_Model_DbTable_{{{upper_name}}}
    */
   private $_{{{lower_name}}}DbTable;
-  
+
+{{{foreign_dbtables_declarations}}}
   function __construct() {
     $this->_{{{lower_name}}}DbTable = new Teleperformance_Model_DbTable_{{{upper_name}}}();
+{{{foreign_dbtables_instantiations}}}
   }
   
   public function fetchAll() {
@@ -28,11 +30,17 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
   } 
 
   public function insert(array $data){
-    $this->_{{{lower_name}}}DbTable->insert($data);
+{{{foreign_unsets}}}
+    $id = $this->_{{{lower_name}}}DbTable->insert($data);
+    
+{{{foreign_inserts}}}
   }
 
   public function update(array $data){
-    return $this->_{{{lower_name}}}DbTable->update($data, ));
+{{{foreign_unsets}}}
+    $this->_{{{lower_name}}}DbTable->update($data));
+
+{{{foreign_updates}}}
   }
 
   public function deleteById($id){
@@ -40,9 +48,9 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
   }
   
   public function fetchByFilters(array $data) {
-    ${{{lower_name}}} = $this->_{{{lower_name}}}DbTable->fetchByFilter($data);
+    ${{{lower_plural_name}}} = $this->_{{{lower_name}}}DbTable->fetchByFilter($data);
     ${{{lower_plural_name}}}Dto = array();
-    foreach (${{{lower_name}}} as ${{{lower_name}}}Row) {
+    foreach (${{{lower_plural_name}}} as ${{{lower_name}}}Row) {
       array_push(${{{lower_plural_name}}}Dto, new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row));
     }
     return ${{{lower_plural_name}}}Dto;
