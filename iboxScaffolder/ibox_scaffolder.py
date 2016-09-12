@@ -16,6 +16,12 @@ firstToLowercase = lambda s: s[:1].lower() + s[1:] if s else ''
 firstToUppercase = lambda s: s[:1].upper() + s[1:] if s else ''
 getNumber = lambda s: filter(str.isdigit, s)
 
+def foldS(func, l):
+    if not l:
+        return ""
+    else:
+        return func(l[0]) + foldS(func, l[1:])
+
 def toSnakeCase(name):
     s1 = re.sub('(.)([A-Z][a-z]+)', r'\1_\2', name)
     return re.sub('([a-z0-9])([A-Z])', r'\1_\2', s1).lower()
@@ -147,22 +153,18 @@ class FormEditFile(ABMFormFile):
             subforms += "     */\n"
             subforms += "    public $" + firstToLowercase(abm.plural_name) + ";\n"
 
-            counts += "    /**\n"
-            counts += "     * @var int\n"
-            counts += "     */\n"
-            counts += "    protected $_numberOf" + abm.plural_name + ";\n"
+            counts += self.declareCountVariable(abm)
 
         self.templateTokens['form_foreign_variables'] = subforms + "\n" + counts
 
     def addConstructorToken(self, abms):
         constructorParams    = ""
         variablesDeclaration = ""
-        first = True
         for abm in abms:
-            constructorParams += "$numberOf" if first else ", $numberOf"
-            constructorParams += abm.plural_name
-            first = False
-            variablesDeclaration += "        $this->_numberOf" + abm.plural_name + " = $numberOf" + abm.plural_name + ";\n"
+            constructorParams += self.constructorParams(abm)
+            variablesDeclaration += self.variablesDeclaration(abm)
+        constructorParams = constructorParams[:-1]
+        constructorParams = constructorParams[:-1]
 
         constructor = "function __construct(" + constructorParams + ") {\n" + variablesDeclaration
         constructor += "        parent::__construct();\n"
@@ -189,6 +191,7 @@ class FormEditFile(ABMFormFile):
             methodsDeclaration += "            $subform = new Zend_Form_SubForm();\n"
             methodsDeclaration += "            $subform->setIsArray(true);\n\n"
             methodsDeclaration += propertiesDeclaration
+
             methodsDeclaration += "            $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform, $i);\n"
             methodsDeclaration += "        }\n"
             methodsDeclaration += "        $this->" + firstToLowercase(abm.plural_name) + "->addSubForm($subform, $i);\n"
@@ -196,6 +199,43 @@ class FormEditFile(ABMFormFile):
 
         self.templateTokens['form_foreign_methods'] = methods
         self.templateTokens['form_foreign_methods_declaration'] = methodsDeclaration
+
+
+    def foreignPropertiesDeclaration(self, tabs, deep, abms):
+    if not abms:
+        return ""
+    else:
+        return func(l[0]) + foldS(func, l[1:])
+
+    def foreignPropertiesDeclaration(self, abm, tab, deep):
+        methodsDeclaration = ""
+        propertiesDeclaration = ""
+        for prop in abm.properties.keys():
+            propertiesDeclaration += (tab*deep) + "            $" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
+            propertiesDeclaration += (tab*deep) + "            $" + prop + "->setLabel('" + prop + "');\n"
+            propertiesDeclaration += (tab*deep) + "            $subform->addElement('" + prop + "');\n\n"
+
+
+        methodsDeclaration += (tab*deep) + "        for ($i = 0; $i < $this->_numberOf" + abm.plural_name + "; $i++) {\n"
+        methodsDeclaration += (tab*deep) + "            $subform = new Zend_Form_SubForm();\n"
+        methodsDeclaration += (tab*deep) + "            $subform->setIsArray(true);\n\n"
+        methodsDeclaration += propertiesDeclaration
+        return methodsDeclaration + 
+
+
+    def declareCountVariable(self, abm):
+        counts =  "    /**\n"
+        counts += "     * @var int\n"
+        counts += "     */\n"
+        counts += "    protected $_numberOf" + abm.plural_name + ";\n"
+        return counts + foldS(self.declareCountVariable, abm.foreignProperties)
+    
+    def constructorParams(self, abm):
+        return "$numberOf" + abm.plural_name + ", " + foldS(self.constructorParams, abm.foreignProperties)
+
+    def variablesDeclaration(self, abm):
+        return "        $this->_numberOf" + abm.plural_name + " = $numberOf" + abm.plural_name + ";\n" + foldS(self.variablesDeclaration, abm.foreignProperties)
+
 
 
 # =============================
@@ -520,7 +560,7 @@ class EditHtmlFile(ABMFile):
 # ============================================================================================================
 
 class ABMCreator(object):
-    def __init__(self, className, pluralName, properties = {}, foreignProperties = {}, tableName = None):
+    def __init__(self, className, pluralName, properties = {}, foreignProperties = [], tableName = None):
         self.class_name  = className
         self.plural_name = pluralName
         self.files = []
@@ -736,9 +776,18 @@ if __name__ == "__main__":
         'description': 'varchar(255) DEFAULT NULL'
     }
 
+    detailFProperties = [
+        ABMCreator('FirstDetailProperty', 'FirstDetailProperties', {'id': "integer", 'aaaaaa': "integer"}),
+        ABMCreator('SecondDetailProperty', 'SecondDetailProperties', {'id': "integer", 'bbbbbb': "integer"})
+    ]
+
+    speakersFProperties = [
+        ABMCreator('FirstSpeakerProperty', 'FirstSpeakerProperties', {'id': "integer", 'cccccc': "integer"}),
+    ]
+
     foreignProperties = [
-        ABMCreator('Detail', 'Details', detailProperties).dbTableFile().dtoFile(),
-        ABMCreator('Speaker', 'Speakers', speakerProperties).dbTableFile().dtoFile()
+        ABMCreator('Detail', 'Details', detailProperties, detailFProperties).dbTableFile().dtoFile(),
+        ABMCreator('Speaker', 'Speakers', speakerProperties, speakersFProperties).dbTableFile().dtoFile()
     ]
 
     ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()
