@@ -876,13 +876,8 @@ if __name__ == "__main__":
     ]
 
     foreignProperties = [
-<<<<<<< HEAD
-        ABMCreator('Detail', 'Details', detailProperties, detailFProperties).dbTableFile().dtoFile(),
-        ABMCreator('Speaker', 'Speakers', speakerProperties, speakersFProperties).dbTableFile().dtoFile()
-=======
         ABMCreator('EventDetail', 'EventDetails', detailProperties).dbTableFile().dtoFile(),
         ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties).dbTableFile().dtoFile()
->>>>>>> 0069e2c64985f7c6502ff7832c13ba13583fad24
     ]
 
     ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()
