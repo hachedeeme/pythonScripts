@@ -3,11 +3,29 @@
 class Teleperformance_Model_Dto_{{{upper_name}}} {
 
 {{{properties_declarations}}}
-{{{foreign_dtos_declarations}}}
-{{{foreign_dbtables_declarations}}}
-    public function __construct(Zend_Db_Table_Row ${{{lower_name}}}Row) {
+    public function __construct(Zend_Db_Table_Row ${{{lower_name}}}Row, $expansions = {}) {
 {{{properties_set}}}
-{{{foreign_dbtables_set}}}
-{{{foreign_dtos_set}}}
+		foreach ($expansions as $propWithId => $propAndPk) {
+			$prop = $tableAndPk[0];
+			$pk = $tableAndPk[1];
+			$upperProp = ucfirst($prop);
+			$dbTableName = 'Teleperformance_Model_DbTable_' . $upperProp;
+			$dbTable = new $dbTableName();
+
+			# If has the property, is singular
+			if (property_exists($this, $propWithId)) {
+				$this->$prop = $dbTable->fetchByPk($propWithId, $pk);
+			} 
+			# if not, is a list
+			else {
+				$propRows = $dbTable->fetchAll(array('event_id = ?' => $eventRow->id));
+				$propName = $prop . 'Array';
+		        $this->$propName = array();
+		        foreach ($propRows as $propRow) {
+		        	$dtoName = 'Teleperformance_Model_Dto_' . $upperProp;
+		            array_push($this->$propName, new $dtoName($propRow));
+				}
+	        }
+		}
     }
 }
