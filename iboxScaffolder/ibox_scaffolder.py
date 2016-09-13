@@ -39,6 +39,7 @@ def replaceAllTokens(text, tokens):
             text = text.replace('{{{' + token + '}}}', replacement)
         else:
             text = text.replace('{{{' + token + '}}}\n', '')
+            text = text.replace('{{{' + token + '}}}', '')
     return text
 
 # =============================
@@ -100,7 +101,25 @@ class ControllerFile(ABMFile):
     def __init__(self, className, pluralName, foreignProperties):
         ABMFile.__init__(self, className, pluralName, 'backend_controller')
         self.path = config['backend']['controllers'] + pluralName + 'Controller.php'
+        self.addEditFormTokens(foreignProperties);
 
+    def addEditFormTokens(self, abms):
+        countVariables     = ""
+        formEditParameters = ""
+        for abm in abms:
+            countVariables     += self.countVariables(abm)
+            formEditParameters += self.constructorParams(abm)
+        formEditParameters = formEditParameters[:-1]
+        formEditParameters = formEditParameters[:-1]
+
+        self.templateTokens['count_variables']      = countVariables
+        self.templateTokens['form_edit_parameters'] = formEditParameters 
+
+    def constructorParams(self, abm):
+        return "$numberOf" + abm.plural_name + ", " + foldS(self.constructorParams, abm.foreignProperties)
+
+    def countVariables(self, abm):
+        return "    $numberOf" + abm.plural_name + " = count($this->_getParam('" + abm.plural_name + "'));\n" + foldS(self.countVariables, abm.foreignProperties)
 
 # =============================
 # Backend Model
@@ -878,4 +897,4 @@ if __name__ == "__main__":
         ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties, speakersFProperties).dbTableFile().dtoFile()
     ]
 
-    ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()
+    ABMCreator('Event', 'Events', eventProperties).backendABM().execute()

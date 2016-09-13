@@ -40,7 +40,8 @@ class Teleperformance_{{{upper_plural_name}}}Controller extends Turisweb_Rest_Co
   }
   
   public function postAction() {
-    $form = new Teleperformance_Form_{{{upper_name}}}Edit();
+{{{count_variables}}}
+    $form = new Teleperformance_Form_{{{upper_name}}}Edit({{{form_edit_parameters}}});
     if ($form->isValid($this->_getAllParams())) {
       try {
         $this->_{{{lower_name}}}Model->insert($form->getValues());
@@ -55,7 +56,8 @@ class Teleperformance_{{{upper_plural_name}}}Controller extends Turisweb_Rest_Co
   }
 
   public function putAction() {
-    $form = new Teleperformance_Form_{{{upper_name}}}Edit();
+{{{count_variables}}}
+    $form = new Teleperformance_Form_{{{upper_name}}}Edit({{{form_edit_parameters}}});
     if ($form->isValid($this->_getAllParams())) {
       $this->_{{{lower_name}}}Model->update($form->getValues());
       $this->getResponse()->setHttpResponseCode(200);
