@@ -41,6 +41,10 @@ def replaceAllTokens(text, tokens):
             text = text.replace('{{{' + token + '}}}\n', '')
     return text
 
+def getPhpKeyArrayFromDict(dic, indent):
+    return "array(\n" + indent*2 + (",\n" + indent*2).join(["'" + k + "' => " + v for k, v in dic.items()]) + "\n" + indent + ")"
+
+
 # =============================
 # Abstract Classes
 # ============================================================================================================
@@ -107,17 +111,27 @@ class ControllerFile(ABMFile):
 # ============================================================================================================
 
 class ModelFile(ABMFile):
-    def __init__(self, className, pluralName, foreignProperties):
+    def __init__(self, className, pluralName, foreignProperties, expansions):
         ABMFile.__init__(self, className, pluralName, 'backend_model')
         self.path = config['backend']['models'] + className + '.php'
-        self.addForeignTokens(foreignProperties)
+        self.addForeignTokens(foreignProperties, expansions)
 
-    def addForeignTokens(self, foreignProperties):
+    def _addDbTableToExpansions(self, expansions, eType):
+        return {prop: "array(" + tableAndId[0] + ", '" + tableAndId[1] + "')" 
+            for prop, tableAndId in (expansions[eType] if eType in expansions else {}).iteritems()}
+
+    def addForeignTokens(self, foreignProperties, expansions):
         foreignDbtablesDeclarations = ""
         foreignDbtablesInstantiations = ""
         foreignUnsets = ""
         foreignInserts = ""
         foreignUpdates = ""
+
+        listExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'list')
+        dtoListExpansions = "$expansions = " + getPhpKeyArrayFromDict(listExpansionWithDbTable, "    ") + ";"
+
+        singleExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'single')
+        dtoSingleExpansions = "$expansions = " + getPhpKeyArrayFromDict(singleExpansionWithDbTable, "    ") + ";"
 
         for prop in foreignProperties:
             abm = prop.files[0]
@@ -147,6 +161,8 @@ class ModelFile(ABMFile):
         self.templateTokens['foreign_unsets'] = foreignUnsets
         self.templateTokens['foreign_inserts'] = foreignInserts
         self.templateTokens['foreign_updates'] = foreignUpdates
+        self.templateTokens['dto_list_expansions'] = dtoListExpansions
+        self.templateTokens['dto_single_expansions'] = dtoSingleExpansions
 
 
 # =============================
@@ -154,14 +170,13 @@ class ModelFile(ABMFile):
 # ============================================================================================================
 
 class DtoFile(ABMFile):
-    # TODO permitir DTOs que inflan referencias de 1 objeto, no solo de array
-    def __init__(self, className, pluralName, properties, foreignProperties):
+    def __init__(self, className, pluralName, properties, foreignProperties, expansions):
         ABMFile.__init__(self, className, pluralName, 'backend_dto')
         self.path = config['backend']['dtos'] + className + '.php'
-        self.addPropertiesTokens(properties)
-        self.addForeignPropertiesTokens(foreignProperties)
+        self.addPropertiesTokens(properties, expansions)
+        #self.addForeignPropertiesTokens(foreignProperties, expansions)
 
-    def addPropertiesTokens(self, properties):
+    def addPropertiesTokens(self, properties, expansions):
         propertiesDeclarations = ""
         propertiesSet = ""
 
@@ -173,7 +188,8 @@ class DtoFile(ABMFile):
         self.templateTokens['properties_declarations'] = propertiesDeclarations
         self.templateTokens['properties_set'] = propertiesSet
 
-    def addForeignPropertiesTokens(self, foreignProperties):
+    # Not used for now
+    def addForeignPropertiesTokens(self, foreignProperties, expansions):
         foreignDtosDeclarations = ""
         foreignDbTablesDeclarations = ""
         foreignDbtablesSet = ""
@@ -292,26 +308,26 @@ class FormEditFile(ABMFormFile):
         self.templateTokens['form_foreign_methods_declaration'] = methodsDeclaration
 
 
-    def foreignPropertiesDeclaration(self, tabs, deep, abms):
-    if not abms:
-        return ""
-    else:
-        return func(l[0]) + foldS(func, l[1:])
+    # def foreignPropertiesDeclaration(self, tabs, deep, abms):
+    # if not abms:
+    #     return ""
+    # else:
+    #     return func(l[0]) + foldS(func, l[1:])
 
-    def foreignPropertiesDeclaration(self, abm, tab, deep):
-        methodsDeclaration = ""
-        propertiesDeclaration = ""
-        for prop in abm.properties.keys():
-            propertiesDeclaration += (tab*deep) + "            $" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
-            propertiesDeclaration += (tab*deep) + "            $" + prop + "->setLabel('" + prop + "');\n"
-            propertiesDeclaration += (tab*deep) + "            $subform->addElement('" + prop + "');\n\n"
+    # def foreignPropertiesDeclaration(self, abm, tab, deep):
+    #     methodsDeclaration = ""
+    #     propertiesDeclaration = ""
+    #     for prop in abm.properties.keys():
+    #         propertiesDeclaration += (tab*deep) + "            $" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
+    #         propertiesDeclaration += (tab*deep) + "            $" + prop + "->setLabel('" + prop + "');\n"
+    #         propertiesDeclaration += (tab*deep) + "            $subform->addElement('" + prop + "');\n\n"
 
 
-        methodsDeclaration += (tab*deep) + "        for ($i = 0; $i < $this->_numberOf" + abm.plural_name + "; $i++) {\n"
-        methodsDeclaration += (tab*deep) + "            $subform = new Zend_Form_SubForm();\n"
-        methodsDeclaration += (tab*deep) + "            $subform->setIsArray(true);\n\n"
-        methodsDeclaration += propertiesDeclaration
-        return methodsDeclaration + 
+    #     methodsDeclaration += (tab*deep) + "        for ($i = 0; $i < $this->_numberOf" + abm.plural_name + "; $i++) {\n"
+    #     methodsDeclaration += (tab*deep) + "            $subform = new Zend_Form_SubForm();\n"
+    #     methodsDeclaration += (tab*deep) + "            $subform->setIsArray(true);\n\n"
+    #     methodsDeclaration += propertiesDeclaration
+    #     return methodsDeclaration + 
 
 
     def declareCountVariable(self, abm):
@@ -651,18 +667,19 @@ class EditHtmlFile(ABMFile):
 # ============================================================================================================
 
 class ABMCreator(object):
-    def __init__(self, className, pluralName, properties = {}, foreignProperties = [], tableName = None):
+    def __init__(self, className, pluralName, properties = {}, foreignProperties = [], expansions = {}, tableName = None):
         self.class_name  = className
         self.plural_name = pluralName
         self.files = []
         self.properties = properties
         self.foreignProperties = foreignProperties
+        self.expansions = expansions
 
     # ======================================================
     # === Backend files
     # ======================================================
     def modelFile(self):
-        self.files.append(ModelFile(self.class_name, self.plural_name, self.foreignProperties))
+        self.files.append(ModelFile(self.class_name, self.plural_name, self.foreignProperties, self.expansions))
         return self
 
     def dbTableFile(self):
@@ -682,7 +699,7 @@ class ABMCreator(object):
         return self
 
     def dtoFile(self):
-        self.files.append(DtoFile(self.class_name, self.plural_name, self.properties, self.foreignProperties))
+        self.files.append(DtoFile(self.class_name, self.plural_name, self.properties, self.foreignProperties, self.expansions))
         return self
 
     def backendABM(self):
@@ -839,7 +856,7 @@ if __name__ == "__main__":
         'city': 'varchar(50) NOT NULL',
         'location': 'varchar(255) NOT NULL',
         'image': 'varchar(255) DEFAULT NULL',
-        'country_code': 'varchar(3) DEFAULT NULL',
+        'countryCode': 'varchar(3) DEFAULT NULL',
         'event_type_id': 'int(11) DEFAULT NULL',
         'timezone': 'varchar(3) NOT NULL',
         'start_date': 'date DEFAULT NULL',
@@ -847,6 +864,11 @@ if __name__ == "__main__":
         'start_hour': 'varchar(5) DEFAULT NULL',
         'end_hour': 'varchar(5) DEFAULT NULL',
         'creationDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    }
+
+    eventExpansions = {
+        'list': {'countryCode': ('country', 'code')},
+        'single': {'eventDetail': ('eventDetail', 'id'), 'eventSpeaker': ('eventSpeaker', 'id')}
     }
 
     detailProperties = {
@@ -880,4 +902,4 @@ if __name__ == "__main__":
         ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties).dbTableFile().dtoFile()
     ]
 
-    ABMCreator('Event', 'Events', eventProperties, foreignProperties).backendABM().execute()
+    ABMCreator('Event', 'Events', eventProperties, foreignProperties, eventExpansions).backendABM().execute()
