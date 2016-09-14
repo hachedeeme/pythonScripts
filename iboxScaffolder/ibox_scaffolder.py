@@ -135,25 +135,25 @@ class ModelFile(ABMFile):
 
         for prop in foreignProperties:
             abm = prop.files[0]
-            combinedUpperName = self.class_name + abm.templateTokens['upper_name']
-            combinedLowerName = self.templateTokens['lower_name'] + abm.templateTokens['upper_name']
+            upperName = abm.templateTokens['upper_name']
+            lowerName = abm.templateTokens['lower_name']
             lowerPluralName = abm.templateTokens['lower_plural_name']
 
             foreignDbtablesDeclarations += "  /**\n"
-            foreignDbtablesDeclarations += "   * @var Teleperformance_Model_DbTable_" + combinedUpperName + "\n"
+            foreignDbtablesDeclarations += "   * @var Teleperformance_Model_DbTable_" + upperName + "\n"
             foreignDbtablesDeclarations += "   */\n"
-            foreignDbtablesDeclarations += "  private $_" + combinedLowerName + "DbTable;\n\n"
+            foreignDbtablesDeclarations += "  private $_" + lowerName + "DbTable;\n\n"
 
-            foreignDbtablesInstantiations += "    $this->_" + combinedLowerName + "DbTable = "
-            foreignDbtablesInstantiations += "new Teleperformance_Model_DbTable_" + combinedUpperName + "();\n"
+            foreignDbtablesInstantiations += "    $this->_" + lowerName + "DbTable = "
+            foreignDbtablesInstantiations += "new Teleperformance_Model_DbTable_" + upperName + "();\n"
 
             foreignUnsets += "    $" + lowerPluralName + " = $data['" + lowerPluralName + "'];\n"
             foreignUnsets += "    unset($data['" + lowerPluralName + "']);\n\n"
 
-            foreignInserts += "    $this->saveRelated($this->_" + combinedLowerName + "DbTable, '"
+            foreignInserts += "    $this->saveRelated($this->_" + lowerName + "DbTable, '"
             foreignInserts += self.templateTokens['lower_name'] + "_id', $id, $" + lowerPluralName + ");\n"
 
-            foreignUpdates += "    $this->saveRelated($this->_" + combinedLowerName + "DbTable, '"
+            foreignUpdates += "    $this->saveRelated($this->_" + lowerName + "DbTable, '"
             foreignUpdates += self.templateTokens['lower_name'] + "_id', $data['id'], $" + lowerPluralName + ");\n"
 
         self.templateTokens['foreign_dbtables_declarations'] = foreignDbtablesDeclarations
