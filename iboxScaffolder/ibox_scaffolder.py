@@ -127,11 +127,11 @@ class ModelFile(ABMFile):
         foreignInserts = ""
         foreignUpdates = ""
 
-        listExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'list')
-        dtoListExpansions = "$expansions = " + getPhpKeyArrayFromDict(listExpansionWithDbTable, "    ") + ";"
+        # listExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'list')
+        # dtoListExpansions = "$expansions = " + getPhpKeyArrayFromDict(listExpansionWithDbTable, "    ") + ";"
 
-        singleExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'single')
-        dtoSingleExpansions = "$expansions = " + getPhpKeyArrayFromDict(singleExpansionWithDbTable, "    ") + ";"
+        # singleExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'single')
+        # dtoSingleExpansions = "$expansions = " + getPhpKeyArrayFromDict(singleExpansionWithDbTable, "    ") + ";"
 
         for prop in foreignProperties:
             abm = prop.files[0]
@@ -161,8 +161,8 @@ class ModelFile(ABMFile):
         self.templateTokens['foreign_unsets'] = foreignUnsets
         self.templateTokens['foreign_inserts'] = foreignInserts
         self.templateTokens['foreign_updates'] = foreignUpdates
-        self.templateTokens['dto_list_expansions'] = dtoListExpansions
-        self.templateTokens['dto_single_expansions'] = dtoSingleExpansions
+        # self.templateTokens['dto_list_expansions'] = dtoListExpansions
+        # self.templateTokens['dto_single_expansions'] = dtoSingleExpansions
 
 
 # =============================
@@ -173,10 +173,11 @@ class DtoFile(ABMFile):
     def __init__(self, className, pluralName, properties, foreignProperties, expansions):
         ABMFile.__init__(self, className, pluralName, 'backend_dto')
         self.path = config['backend']['dtos'] + className + '.php'
-        self.addPropertiesTokens(properties, expansions)
-        #self.addForeignPropertiesTokens(foreignProperties, expansions)
+        self.addPropertiesTokens(properties)
+        self.addForeignPropertiesTokens(foreignProperties)
+        self.addExpansions(properties, foreignProperties, expansions)
 
-    def addPropertiesTokens(self, properties, expansions):
+    def addPropertiesTokens(self, properties):
         propertiesDeclarations = ""
         propertiesSet = ""
 
@@ -188,12 +189,11 @@ class DtoFile(ABMFile):
         self.templateTokens['properties_declarations'] = propertiesDeclarations
         self.templateTokens['properties_set'] = propertiesSet
 
-    # Not used for now
-    def addForeignPropertiesTokens(self, foreignProperties, expansions):
+    def addForeignPropertiesTokens(self, foreignProperties):
         foreignDtosDeclarations = ""
         foreignDbTablesDeclarations = ""
-        foreignDbtablesSet = ""
-        foreignDtosSet = ""
+        #foreignDbtablesSet = ""
+        #foreignDtosSet = ""
 
         selfLowerName = self.templateTokens['lower_name']
         for prop in foreignProperties:
@@ -210,24 +210,69 @@ class DtoFile(ABMFile):
             foreignDbTablesDeclarations += "    /**\n"
             foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + className + "\n"
             foreignDbTablesDeclarations += "     */\n"
-            foreignDbTablesDeclarations += "    private $" + abm.templateTokens['lower_name'] + "DbTable;\n\n"
+            foreignDbTablesDeclarations += "    private static $" + abm.templateTokens['lower_name'] + "DbTable;"
+            foreignDbTablesDeclarations += " = new Teleperformance_Model_DbTable_" + className + "();\n\n"
 
-            foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
-            foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + className + "();\n"
+            # foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
+            # foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + className + "();\n"
 
-            foreignDtosSet += "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
-            foreignDtosSet += "array('" + selfLowerName + "_id = ?' => $" + selfLowerName + "Row->id));\n"
-            foreignDtosSet += "        $this->" + lowerPluralName + " = array();\n"
-            foreignDtosSet += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
-            foreignDtosSet += "            array_push($this->" + lowerPluralName + ", "
-            foreignDtosSet += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
-            foreignDtosSet += "        }\n\n"
+            # foreignDtosSet += "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
+            # foreignDtosSet += "array('" + selfLowerName + "_id = ?' => $" + selfLowerName + "Row->id));\n"
+            # foreignDtosSet += "        $this->" + lowerPluralName + " = array();\n"
+            # foreignDtosSet += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
+            # foreignDtosSet += "            array_push($this->" + lowerPluralName + ", "
+            # foreignDtosSet += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
+            # foreignDtosSet += "        }\n\n"
 
         self.templateTokens['foreign_dtos_declarations'] = foreignDtosDeclarations
         self.templateTokens['foreign_dbtables_declarations'] = foreignDbTablesDeclarations
-        self.templateTokens['foreign_dbtables_set'] = foreignDbtablesSet
-        self.templateTokens['foreign_dtos_set'] = foreignDtosSet
+        #self.templateTokens['foreign_dbtables_set'] = foreignDbtablesSet
+        #self.templateTokens['foreign_dtos_set'] = foreignDtosSet
+
+    def getSingleExpandText(self, prop, pk):
+        return "        $this->" + prop + " = $dbTable->fetchByPk($propWithId, '" + pk + "');\n\n"
         
+    def getListExpandText(self, abm, pk):
+        className = abm.class_name
+        lowerName = abm.templateTokens['lower_name']
+        lowerPluralName = abm.templateTokens['lower_plural_name']
+        selfLowerName = self.templateTokens['lower_name']
+                
+        text =  "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
+        text += "array('" + selfLowerName + firstToUppercase(pk) + " = ?' => $this->id));\n"
+        text += "        $this->" + lowerPluralName + " = array();\n"
+        text += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
+        text += "            array_push($this->" + lowerPluralName + ", "
+        text += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
+        text += "        }\n\n"
+
+        return text
+
+    def addExpansions(self, properties, foreignProperties, expansions):
+        singleExpansions = ""
+        listExpansions = ""
+
+        singleExpansionsMap = expansions['single'] if 'single' in expansions else {}
+        listExpansionsMap = expansions['list'] if 'list' in expansions else {}
+
+        for prop in properties:
+            if prop in singleExpansionsMap:
+                singleExpansions += self.getSingleExpandText(prop, singleExpansionsMap[prop])
+            elif prop in listExpansionsMap:
+                listExpansions += self.getSingleExpandText(prop, listExpansionsMap[prop])
+
+        for prop in foreignProperties:
+            if prop.files:
+                abm = prop.files[0]
+                lowerName = abm.templateTokens['lower_name']
+                if lowerName in singleExpansionsMap:
+                    singleExpansions += self.getListExpandText(abm, singleExpansionsMap[lowerName])
+                elif lowerName in listExpansionsMap:
+                    listExpansions += self.getListExpandText(abm, listExpansionsMap[lowerName])
+
+        self.templateTokens['single_expansions'] = singleExpansions
+        self.templateTokens['list_expansions'] = listExpansions
+
 
 # =============================
 # Backend List Form
@@ -867,8 +912,8 @@ if __name__ == "__main__":
     }
 
     eventExpansions = {
-        'list': {'countryCode': ('country', 'code')},
-        'single': {'eventDetail': ('eventDetail', 'id'), 'eventSpeaker': ('eventSpeaker', 'id')}
+        'list': {'countryCode': 'code'},
+        'single': {'eventDetail': 'id', 'eventSpeaker': 'id'}
     }
 
     detailProperties = {
