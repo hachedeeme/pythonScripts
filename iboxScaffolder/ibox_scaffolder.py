@@ -122,8 +122,9 @@ class ControllerFile(ABMFile):
     def constructorParams(self, abm):
         return "$numberOf" + abm.plural_name + ", " + foldS(self.constructorParams, abm.foreignProperties)
 
-    def countVariables(self, abm):
-        return "    $numberOf" + abm.plural_name + " = count($this->_getParam('" + abm.plural_name + "'));\n" + foldS(self.countVariables, abm.foreignProperties)
+    def countVariables(self, prop):
+        abm = prop.files[0]
+        return "    $numberOf" + abm.plural_name + " = count($this->_getParam('" + abm.templateTokens['lower_plural_name'] + "'));\n" + foldS(self.countVariables, prop.foreignProperties)
 
 # =============================
 # Backend Model
@@ -214,12 +215,12 @@ class DtoFile(ABMFile):
         #foreignDbtablesSet = ""
         #foreignDtosSet = ""
 
-        selfLowerName = self.templateTokens['lower_name']
+        #selfLowerName = self.templateTokens['lower_name']
         for prop in foreignProperties:
             abm = prop.files[0]
             className = abm.class_name
-            lowerName = abm.templateTokens['lower_name']
-            lowerPluralName = abm.templateTokens['lower_plural_name']
+            #lowerName = abm.templateTokens['lower_name']
+            #lowerPluralName = abm.templateTokens['lower_plural_name']
 
             foreignDtosDeclarations += "    /**\n"
             foreignDtosDeclarations += "     * @var array Teleperformance_Model_Dto_" + className + "\n"
