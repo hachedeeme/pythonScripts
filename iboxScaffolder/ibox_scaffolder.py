@@ -90,7 +90,7 @@ class ABMFormFile(ABMFile):
             formVariables += "    public $" + prop + ";\n"
         
             formElements += "        $this->" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
-            formElements += "        $this->code->setLabel('" + prop + "');\n"
+            formElements += "        $this->" + prop + "->setLabel('" + prop + "');\n"
             formElements += "        $this->addElement($this->" + prop + ");\n\n"
 
         self.templateTokens['form_variables'] = formVariables
@@ -230,7 +230,7 @@ class DtoFile(ABMFile):
             foreignDbTablesDeclarations += "    /**\n"
             foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + className + "\n"
             foreignDbTablesDeclarations += "     */\n"
-            foreignDbTablesDeclarations += "    private static $" + abm.templateTokens['lower_name'] + "DbTable;"
+            foreignDbTablesDeclarations += "    private static $" + abm.templateTokens['lower_name'] + "DbTable"
             foreignDbTablesDeclarations += " = new Teleperformance_Model_DbTable_" + className + "();\n\n"
 
             # foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
@@ -411,13 +411,13 @@ class DBTableFile(ABMFile):
     def __init__(self, className, pluralName, properties = {}, tableName = None):
         ABMFile.__init__(self, className, pluralName, 'backend_dbtable')
         self.path = config['backend']['dbtables'] + className + '.php'
-        self.tableName = tableName if tableName else self.templateTokens['snake_plural_name']
+        self.tableName = tableName if tableName else self.templateTokens['lower_plural_name']
         self.templateTokens['table_name'] = self.tableName
         self.addTableToken(properties)
 
     def addTableToken(self, properties):
         tableToken = "/**\n"
-        tableToken += ("create table " + self.templateTokens['snake_plural_name'] + " (\n")
+        tableToken += ("create table " + self.tableName + " (\n")
         for key in properties.keys():
             tableToken += ("  " + key + " " + properties[key] + ",\n")
         tableToken += ("  primary key (id)\n")
@@ -732,6 +732,7 @@ class ABMCreator(object):
         self.properties = properties
         self.foreignProperties = foreignProperties
         self.expansions = expansions
+        self.tableName = tableName
 
     # ======================================================
     # === Backend files
@@ -741,7 +742,7 @@ class ABMCreator(object):
         return self
 
     def dbTableFile(self):
-        self.files.append(DBTableFile(self.class_name, self.plural_name, self.properties))
+        self.files.append(DBTableFile(self.class_name, self.plural_name, self.properties, self.tableName))
         return self
 
     def formListFile(self):
@@ -908,56 +909,44 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
 if __name__ == "__main__":
     eventProperties = {
         'id': 'integer not null auto_increment',
-        'title': 'varchar(100) DEFAULT NULL',
-        'description': 'text',
-        'link': 'varchar(255) DEFAULT NULL',
-        'city': 'varchar(50) NOT NULL',
-        'location': 'varchar(255) NOT NULL',
-        'image': 'varchar(255) DEFAULT NULL',
-        'countryCode': 'varchar(3) DEFAULT NULL',
-        'event_type_id': 'int(11) DEFAULT NULL',
-        'timezone': 'varchar(3) NOT NULL',
-        'start_date': 'date DEFAULT NULL',
-        'end_date': 'date DEFAULT NULL',
-        'start_hour': 'varchar(5) DEFAULT NULL',
-        'end_hour': 'varchar(5) DEFAULT NULL',
-        'creationDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+        'name': 'varchar(100)',
+        'longDescription': 'text',
+        'shortDescription': 'varchar(255)',
+        'link': 'varchar(255)',
+        'city': 'varchar(50)',
+        'location': 'varchar(255)',
+        'image': 'varchar(255)',
+        'countryCode': 'varchar(3)',
+        'creationDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'startDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'endDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
     }
+
+    eventSpeakerProp = {
+        'id': 'integer not null auto_increment',
+        'eventId': 'integer',
+        'speakerId': 'integer',
+        'shortDescription': 'varchar(255)'
+    }
+
+    eventSubeventProp = {
+        'id': 'integer not null auto_increment',
+        'eventId': 'integer',
+        'name': 'varchar(100)',
+        'longDescription': 'text',
+        'shortDescription': 'varchar(255)',
+        'startDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'endDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+    }
+
+    eventForeignProperties = [
+        ABMCreator('EventSpeaker',  'EventSpeakers',  eventSpeakerProp, tableName="eventsSpeakers" ).dbTableFile().dtoFile(),
+        ABMCreator('EventSubevent', 'EventSubevents', eventSubeventProp,tableName="eventsSubevents").dbTableFile().dtoFile()
+    ]
 
     eventExpansions = {
         'list': {'countryCode': 'code'},
-        'single': {'eventDetail': 'id', 'eventSpeaker': 'id'}
+        'single': {'eventSubevent': 'id', 'eventSpeaker': 'id'}
     }
 
-    detailProperties = {
-        'id': 'int(11) NOT NULL AUTO_INCREMENT',
-        'event_id': 'int(11) DEFAULT NULL',
-        'title': 'varchar(100) DEFAULT NULL',
-        'description': 'varchar(10000) DEFAULT NULL',
-        'start_date': 'date DEFAULT NULL',
-        'end_date': 'date DEFAULT NULL',
-        'start_hour': 'varchar(5) DEFAULT NULL',
-        'end_hour': 'varchar(5) DEFAULT NULL'
-    }
-
-    speakerProperties = {
-        'event_id': 'int(11) DEFAULT NULL',
-        'speaker_id': 'int(11) DEFAULT NULL',
-        'description': 'varchar(255) DEFAULT NULL'
-    }
-
-    detailFProperties = [
-        ABMCreator('FirstDetailProperty', 'FirstDetailProperties', {'id': "integer", 'aaaaaa': "integer"}).dbTableFile(),
-        ABMCreator('SecondDetailProperty', 'SecondDetailProperties', {'id': "integer", 'bbbbbb': "integer"}).dbTableFile()
-    ]
-
-    speakersFProperties = [
-        ABMCreator('FirstSpeakerProperty', 'FirstSpeakerProperties', {'id': "integer", 'cccccc': "integer"}, detailFProperties).dbTableFile(),
-    ]
-
-    foreignProperties = [
-        ABMCreator('EventDetail', 'EventDetails', detailProperties).dbTableFile().dtoFile(),
-        ABMCreator('EventSpeaker', 'EventSpeakers', speakerProperties, speakersFProperties).dbTableFile().dtoFile()
-    ]
-
-    ABMCreator('Event', 'Events', eventProperties, foreignProperties, eventExpansions).backendABM().execute()
+    ABMCreator('Event', 'Events', eventProperties, eventForeignProperties, eventExpansions).backendABM().execute()

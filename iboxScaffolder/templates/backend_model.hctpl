@@ -16,7 +16,7 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
     ${{{lower_plural_name}}} = $this->_{{{lower_name}}}DbTable->fetchAll();
     ${{{lower_plural_name}}}Dto = array();
     foreach (${{{lower_plural_name}}} as ${{{lower_name}}}Row) {
-      array_push(${{{lower_plural_name}}}Dto, new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row)->forList());
+      array_push(${{{lower_plural_name}}}Dto, (new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row))->forList());
     }
     return ${{{lower_plural_name}}}Dto;
   }
@@ -26,7 +26,7 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
     if (${{{lower_name}}}Row === null) {
       throw new Turisweb_Db_DataNotFoundException();
     }
-    return new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row)->forSingle();
+    return (new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row))->forSingle();
   } 
 
   public function insert(array $data){
@@ -38,7 +38,7 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
 
   public function update(array $data){
 {{{foreign_unsets}}}
-    $this->_{{{lower_name}}}DbTable->update($data));
+    $this->_{{{lower_name}}}DbTable->update($data);
 
 {{{foreign_updates}}}
   }
@@ -51,7 +51,7 @@ class Teleperformance_Model_{{{upper_name}}} extends Turisweb_Model_Paginated {
     ${{{lower_plural_name}}} = $this->_{{{lower_name}}}DbTable->fetchByFilter($data);
     ${{{lower_plural_name}}}Dto = array();
     foreach (${{{lower_plural_name}}} as ${{{lower_name}}}Row) {
-      array_push(${{{lower_plural_name}}}Dto, new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row)->forList());
+      array_push(${{{lower_plural_name}}}Dto, (new Teleperformance_Model_Dto_{{{upper_name}}}(${{{lower_name}}}Row))->forList());
     }
     return ${{{lower_plural_name}}}Dto;
   }
