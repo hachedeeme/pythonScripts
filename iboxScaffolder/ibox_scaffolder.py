@@ -131,27 +131,17 @@ class ControllerFile(ABMFile):
 # ============================================================================================================
 
 class ModelFile(ABMFile):
-    def __init__(self, className, pluralName, foreignProperties, expansions):
+    def __init__(self, className, pluralName, foreignProperties):
         ABMFile.__init__(self, className, pluralName, 'backend_model')
         self.path = config['backend']['models'] + className + '.php'
-        self.addForeignTokens(foreignProperties, expansions)
+        self.addForeignTokens(foreignProperties)
 
-    def _addDbTableToExpansions(self, expansions, eType):
-        return {prop: "array(" + tableAndId[0] + ", '" + tableAndId[1] + "')" 
-            for prop, tableAndId in (expansions[eType] if eType in expansions else {}).iteritems()}
-
-    def addForeignTokens(self, foreignProperties, expansions):
+    def addForeignTokens(self, foreignProperties):
         foreignDbtablesDeclarations = ""
         foreignDbtablesInstantiations = ""
         foreignUnsets = ""
         foreignInserts = ""
         foreignUpdates = ""
-
-        # listExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'list')
-        # dtoListExpansions = "$expansions = " + getPhpKeyArrayFromDict(listExpansionWithDbTable, "    ") + ";"
-
-        # singleExpansionWithDbTable = self._addDbTableToExpansions(expansions, 'single')
-        # dtoSingleExpansions = "$expansions = " + getPhpKeyArrayFromDict(singleExpansionWithDbTable, "    ") + ";"
 
         for prop in foreignProperties:
             abm = prop.files[0]
@@ -181,8 +171,6 @@ class ModelFile(ABMFile):
         self.templateTokens['foreign_unsets'] = foreignUnsets
         self.templateTokens['foreign_inserts'] = foreignInserts
         self.templateTokens['foreign_updates'] = foreignUpdates
-        # self.templateTokens['dto_list_expansions'] = dtoListExpansions
-        # self.templateTokens['dto_single_expansions'] = dtoSingleExpansions
 
 
 # =============================
@@ -209,9 +197,25 @@ class DtoFile(ABMFile):
         self.templateTokens['properties_declarations'] = propertiesDeclarations
         self.templateTokens['properties_set'] = propertiesSet
 
+    def getDbTableDeclaration(self, dbTableLowerName):
+        dbTableName = firstToUppercase(dbTableLowerName)
+
+        text = "    /**\n"
+        text += "     * @var Teleperformance_Model_DbTable_" + dbTableName + "\n"
+        text += "     */\n"
+        text += "    private static $" + dbTableLowerName + "DbTable;\n\n"
+
+        text += "    private get" + dbTableName + "DbTable() {\n"
+        text += "        if (!$" + dbTableLowerName + "DbTable) {\n"
+        text += "            $this->" + dbTableLowerName + "DbTable = new Teleperformance_Model_DbTable_" + dbTableName + "();\n"
+        text += "        }\n"
+        text += "        return $this->" + dbTableLowerName + "DbTable;\n"
+        text += "    }\n\n"
+
+        return text
+
     def addForeignPropertiesTokens(self, foreignProperties):
         foreignDtosDeclarations = ""
-        foreignDbTablesDeclarations = ""
         #foreignDbtablesSet = ""
         #foreignDtosSet = ""
 
@@ -227,11 +231,6 @@ class DtoFile(ABMFile):
             foreignDtosDeclarations += "     */\n"
             foreignDtosDeclarations += "    public $" + abm.templateTokens['lower_plural_name'] + ";\n\n"
 
-            foreignDbTablesDeclarations += "    /**\n"
-            foreignDbTablesDeclarations += "     * @var Teleperformance_Model_DbTable_" + className + "\n"
-            foreignDbTablesDeclarations += "     */\n"
-            foreignDbTablesDeclarations += "    private static $" + abm.templateTokens['lower_name'] + "DbTable"
-            foreignDbTablesDeclarations += " = new Teleperformance_Model_DbTable_" + className + "();\n\n"
 
             # foreignDbtablesSet += "        $this->" + abm.templateTokens['lower_name'] + "DbTable"
             # foreignDbtablesSet += " = new Teleperformance_Model_DbTable_" + className + "();\n"
@@ -245,30 +244,31 @@ class DtoFile(ABMFile):
             # foreignDtosSet += "        }\n\n"
 
         self.templateTokens['foreign_dtos_declarations'] = foreignDtosDeclarations
-        self.templateTokens['foreign_dbtables_declarations'] = foreignDbTablesDeclarations
         #self.templateTokens['foreign_dbtables_set'] = foreignDbtablesSet
         #self.templateTokens['foreign_dtos_set'] = foreignDtosSet
 
-    def getSingleExpandText(self, prop, pk):
-        return "        $this->" + prop + " = $dbTable->fetchByPk($propWithId, '" + pk + "');\n\n"
+    def getSingleExpandText(self, prop, info):
+        dbTableName = firstToUppercase(info['dbtable'])
+        return "        $this->" + info['dbtable'] + " = $this->get" + dbTableName + "DbTable()->fetchByPk($this->" + prop + ", '" + info['pk'] + "');\n\n"
         
-    def getListExpandText(self, abm, pk):
-        className = abm.class_name
+    def getListExpandText(self, abm, info):
+        dbTableName = firstToUppercase(info['dbtable'] if 'dbtable' in info else abm.class_name)
         lowerName = abm.templateTokens['lower_name']
         lowerPluralName = abm.templateTokens['lower_plural_name']
         selfLowerName = self.templateTokens['lower_name']
                 
-        text =  "        $" + lowerName + "Rows = $this->" + lowerName + "DbTable->fetchAll("
-        text += "array('" + selfLowerName + firstToUppercase(pk) + " = ?' => $this->id));\n"
+        text =  "        $" + lowerName + "Rows = $this->get" + dbTableName + "DbTable()->fetchAll("
+        text += "array('" + selfLowerName + firstToUppercase(info['pk']) + " = ?' => $this->id));\n"
         text += "        $this->" + lowerPluralName + " = array();\n"
         text += "        foreach ($" + lowerName + "Rows as $" + lowerName + "Row) {\n"
         text += "            array_push($this->" + lowerPluralName + ", "
-        text += "new Teleperformance_Model_Dto_" + className + "($" + lowerName + "Row));\n"
+        text += "new Teleperformance_Model_Dto_" + dbTableName + "($" + lowerName + "Row));\n"
         text += "        }\n\n"
 
         return text
 
     def addExpansions(self, properties, foreignProperties, expansions):
+        dbTablesDeclarations = ""
         singleExpansions = ""
         listExpansions = ""
 
@@ -277,8 +277,10 @@ class DtoFile(ABMFile):
 
         for prop in properties:
             if prop in singleExpansionsMap:
+                dbTablesDeclarations += self.getDbTableDeclaration(singleExpansionsMap[prop]['dbtable'])
                 singleExpansions += self.getSingleExpandText(prop, singleExpansionsMap[prop])
             elif prop in listExpansionsMap:
+                dbTablesDeclarations += self.getDbTableDeclaration(listExpansionsMap[prop]['dbtable'])
                 listExpansions += self.getSingleExpandText(prop, listExpansionsMap[prop])
 
         for prop in foreignProperties:
@@ -286,12 +288,15 @@ class DtoFile(ABMFile):
                 abm = prop.files[0]
                 lowerName = abm.templateTokens['lower_name']
                 if lowerName in singleExpansionsMap:
+                    dbTablesDeclarations += self.getDbTableDeclaration(singleExpansionsMap[lowerName]['dbtable'])
                     singleExpansions += self.getListExpandText(abm, singleExpansionsMap[lowerName])
                 elif lowerName in listExpansionsMap:
+                    dbTablesDeclarations += self.getDbTableDeclaration()
                     listExpansions += self.getListExpandText(abm, listExpansionsMap[lowerName])
 
         self.templateTokens['single_expansions'] = singleExpansions
         self.templateTokens['list_expansions'] = listExpansions
+        self.templateTokens['dbtables_declarations'] = dbTablesDeclarations
 
 
 # =============================
@@ -738,7 +743,7 @@ class ABMCreator(object):
     # === Backend files
     # ======================================================
     def modelFile(self):
-        self.files.append(ModelFile(self.class_name, self.plural_name, self.foreignProperties, self.expansions))
+        self.files.append(ModelFile(self.class_name, self.plural_name, self.foreignProperties))
         return self
 
     def dbTableFile(self):
@@ -941,12 +946,26 @@ if __name__ == "__main__":
 
     eventForeignProperties = [
         ABMCreator('EventSpeaker',  'EventSpeakers',  eventSpeakerProp, tableName="eventsSpeakers" ).dbTableFile().dtoFile(),
-        ABMCreator('EventSubevent', 'EventSubevents', eventSubeventProp,tableName="eventsSubevents").dbTableFile().dtoFile()
+        ABMCreator('EventSubevent', 'EventSubevents', eventSubeventProp, tableName="eventsSubevents").dbTableFile().dtoFile()
     ]
 
     eventExpansions = {
-        'list': {'countryCode': 'code'},
-        'single': {'eventSubevent': 'id', 'eventSpeaker': 'id'}
+        'list': {
+            'countryCode': {
+                'dbtable': 'country',
+                'pk': 'code'
+            }
+        },
+        'single': {
+            'eventSubevent': {
+                'dbtable': 'eventSubevent',
+                'pk':'id'
+            },
+            'eventSpeaker': {
+                'dbtable': 'eventSpeaker',
+                'pk':'id'
+            }
+        }
     }
 
     ABMCreator('Event', 'Events', eventProperties, eventForeignProperties, eventExpansions).backendABM().execute()
