@@ -5,8 +5,10 @@ class Teleperformance_Model_Dto_{{{upper_name}}} {
 {{{properties_declarations}}}
 {{{foreign_dtos_declarations}}}
 {{{dbtables_declarations}}}
-    public function __construct(Zend_Db_Table_Row ${{{lower_name}}}Row) {
+    public function __construct(${{{lower_name}}}Row) {
+    	if (${{{lower_name}}}Row) {
 {{{properties_set}}}
+    	}
     }
 
     public function forList() {
