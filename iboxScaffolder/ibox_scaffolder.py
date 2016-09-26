@@ -131,17 +131,20 @@ class ControllerFile(ABMFile):
 # ============================================================================================================
 
 class ModelFile(ABMFile):
-    def __init__(self, className, pluralName, foreignProperties):
+    def __init__(self, className, pluralName, foreignProperties, expansions):
         ABMFile.__init__(self, className, pluralName, 'backend_model')
         self.path = config['backend']['models'] + className + '.php'
-        self.addForeignTokens(foreignProperties)
+        self.addForeignTokens(foreignProperties, expansions)
 
-    def addForeignTokens(self, foreignProperties):
+    def addForeignTokens(self, foreignProperties, expansions):
         foreignDbtablesDeclarations = ""
         foreignDbtablesInstantiations = ""
         foreignUnsets = ""
         foreignInserts = ""
         foreignUpdates = ""
+
+        singleExpansionsMap = expansions['single'] if 'single' in expansions else {}
+        listExpansionsMap = expansions['list'] if 'list' in expansions else {}
 
         for prop in foreignProperties:
             abm = prop.files[0]
@@ -149,6 +152,9 @@ class ModelFile(ABMFile):
             lowerName = abm.templateTokens['lower_name']
             lowerPluralName = abm.templateTokens['lower_plural_name']
 
+            pk = singleExpansionsMap[lowerName]['pk'] if lowerName in singleExpansionsMap else listExpansionsMap[lowerName]['pk']
+            pk = firstToUppercase(pk)
+            
             foreignDbtablesDeclarations += "  /**\n"
             foreignDbtablesDeclarations += "   * @var Teleperformance_Model_DbTable_" + upperName + "\n"
             foreignDbtablesDeclarations += "   */\n"
@@ -161,10 +167,10 @@ class ModelFile(ABMFile):
             foreignUnsets += "    unset($data['" + lowerPluralName + "']);\n\n"
 
             foreignInserts += "    $this->saveRelated($this->_" + lowerName + "DbTable, '"
-            foreignInserts += self.templateTokens['lower_name'] + "_id', $id, $" + lowerPluralName + ");\n"
+            foreignInserts += self.templateTokens['lower_name'] + pk + "', $id, $" + lowerPluralName + ");\n"
 
             foreignUpdates += "    $this->saveRelated($this->_" + lowerName + "DbTable, '"
-            foreignUpdates += self.templateTokens['lower_name'] + "_id', $data['id'], $" + lowerPluralName + ");\n"
+            foreignUpdates += self.templateTokens['lower_name'] + pk + "', $data['id'], $" + lowerPluralName + ");\n"
 
         self.templateTokens['foreign_dbtables_declarations'] = foreignDbtablesDeclarations
         self.templateTokens['foreign_dbtables_instantiations'] = foreignDbtablesInstantiations
@@ -205,11 +211,11 @@ class DtoFile(ABMFile):
         text += "     */\n"
         text += "    private static $" + dbTableLowerName + "DbTable;\n\n"
 
-        text += "    private get" + dbTableName + "DbTable() {\n"
-        text += "        if (!$" + dbTableLowerName + "DbTable) {\n"
-        text += "            $this->" + dbTableLowerName + "DbTable = new Teleperformance_Model_DbTable_" + dbTableName + "();\n"
+        text += "    private function get" + dbTableName + "DbTable() {\n"
+        text += "        if (!self::$" + dbTableLowerName + "DbTable) {\n"
+        text += "            self::$" + dbTableLowerName + "DbTable = new Teleperformance_Model_DbTable_" + dbTableName + "();\n"
         text += "        }\n"
-        text += "        return $this->" + dbTableLowerName + "DbTable;\n"
+        text += "        return self::$" + dbTableLowerName + "DbTable;\n"
         text += "    }\n\n"
 
         return text
@@ -249,7 +255,9 @@ class DtoFile(ABMFile):
 
     def getSingleExpandText(self, prop, info):
         dbTableName = firstToUppercase(info['dbtable'])
-        return "        $this->" + info['dbtable'] + " = $this->get" + dbTableName + "DbTable()->fetchByPk($this->" + prop + ", '" + info['pk'] + "');\n\n"
+        dtoName   = "Teleperformance_Model_Dto_" + dbTableName
+        dtoReturn = "$this->get" + dbTableName + "DbTable()->fetchByPk($this->" + prop + ", '" + info['pk'] + "')"
+        return "        $this->" + info['dbtable'] + " = new " + dtoName + "(" + dtoReturn + ");\n\n"
         
     def getListExpandText(self, abm, info):
         dbTableName = firstToUppercase(info['dbtable'] if 'dbtable' in info else abm.class_name)
@@ -384,7 +392,7 @@ class FormEditFile(ABMFormFile):
         for prop in abm.properties.keys():
             propertiesDeclaration += (tab*deep) + "            $" + prop + " = new Zend_Form_Element_Text('" + prop + "');\n"
             propertiesDeclaration += (tab*deep) + "            $" + prop + "->setLabel('" + prop + "');\n"
-            propertiesDeclaration += (tab*deep) + "            $subform" + str(deep) + "->addElement('" + prop + "');\n\n"
+            propertiesDeclaration += (tab*deep) + "            $subform" + str(deep) + "->addElement($" + prop + ");\n\n"
 
         methodsDeclaration += (tab*deep) + "        for ($i = 0; $i < $this->_numberOf" + abm.plural_name + "; $i++) {\n"
         methodsDeclaration += (tab*deep) + "            $subform" + str(deep) + " = new Zend_Form_SubForm();\n"
@@ -743,7 +751,7 @@ class ABMCreator(object):
     # === Backend files
     # ======================================================
     def modelFile(self):
-        self.files.append(ModelFile(self.class_name, self.plural_name, self.foreignProperties))
+        self.files.append(ModelFile(self.class_name, self.plural_name, self.foreignProperties, self.expansions))
         return self
 
     def dbTableFile(self):
@@ -969,3 +977,9 @@ if __name__ == "__main__":
     }
 
     ABMCreator('Event', 'Events', eventProperties, eventForeignProperties, eventExpansions).backendABM().execute()
+    
+    countryProperties = {
+        'code': 'varchar(3)',
+        'name': 'varchar(100)',
+    }
+    ABMCreator('Country', 'Countries', countryProperties).dbTableFile().dtoFile().execute()
