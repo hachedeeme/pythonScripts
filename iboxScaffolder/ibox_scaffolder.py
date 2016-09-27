@@ -198,7 +198,7 @@ class DtoFile(ABMFile):
         for prop in properties.keys():
             propertiesDeclarations += "    public $" + prop + ";\n"
 
-            propertiesSet += "        $this->" + prop + " = $" + self.templateTokens['lower_name'] + "Row->" + prop + ";\n"
+            propertiesSet += "            $this->" + prop + " = $" + self.templateTokens['lower_name'] + "Row->" + prop + ";\n"
 
         self.templateTokens['properties_declarations'] = propertiesDeclarations
         self.templateTokens['properties_set'] = propertiesSet
@@ -920,6 +920,10 @@ speakersFrontApp.resolveEntityMayPLURALNAMEEditCtrl = angular.extend(angular.cop
 # ============================================================================================================
 
 if __name__ == "__main__":
+
+    # =============================================================================
+    # === Events - EventSpeaker - EventSubevent - EventUsers
+    # =============================================================================
     eventProperties = {
         'id': 'integer not null auto_increment',
         'name': 'varchar(100)',
@@ -953,7 +957,7 @@ if __name__ == "__main__":
     }
 
     eventForeignProperties = [
-        ABMCreator('EventSpeaker',  'EventSpeakers',  eventSpeakerProp, tableName="eventsSpeakers" ).dbTableFile().dtoFile(),
+        ABMCreator('EventSpeaker',  'EventSpeakers',  eventSpeakerProp,  tableName="eventsSpeakers" ).dbTableFile().dtoFile(),
         ABMCreator('EventSubevent', 'EventSubevents', eventSubeventProp, tableName="eventsSubevents").dbTableFile().dtoFile()
     ]
 
@@ -976,10 +980,106 @@ if __name__ == "__main__":
         }
     }
 
-    ABMCreator('Event', 'Events', eventProperties, eventForeignProperties, eventExpansions).backendABM().execute()
+    # ABMCreator('Event', 'Events', eventProperties, eventForeignProperties, eventExpansions).backendABM().execute()
     
+    # =============================================================================
+    # === Country
+    # =============================================================================
     countryProperties = {
         'code': 'varchar(3)',
         'name': 'varchar(100)',
     }
-    ABMCreator('Country', 'Countries', countryProperties).dbTableFile().dtoFile().execute()
+    # ABMCreator('Country', 'Countries', countryProperties).dbTableFile().dtoFile().execute()
+
+    # ============================================================================= 
+    # === Surveys - SurveyQuestionChoices - SurveyKeywords - SurveyQuestions
+    # =============================================================================
+
+    surveyProperties = {
+        'id': 'integer not null auto_increment',
+        'name': 'varchar(100)',
+        'shortDescription': 'varchar(255)',
+        'longDescription': 'text',
+        'publishDate': 'timestamp  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'expirationDate': 'timestamp  NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'state': "enum ('active', 'inactive')"
+    }
+
+    surveyKeywordProperties = {
+        'id': 'integer not null auto_increment',
+        'surveyId': 'integer',
+        'keywordId': 'integer'
+    }
+
+    surveyQuestionProperties = {
+        'id': 'integer not null auto_increment',
+        'surveyId': 'integer',
+        'question': 'varchar(255)',
+        'type': "enum('choice','mchoice','text')",
+        'position': 'integer'
+    }
+
+    surveyQuestionChoiceProperties = {
+        'id': 'integer not null auto_increment',
+        'surveyQuestionId': 'integer',
+        'answer': 'varchar(255)',
+        'isCorrect': 'bit(1)',
+        'position': 'integer'
+    }
+
+    surveyQuestionForeignProperties = [
+        ABMCreator('SurveyQuestionChoice', 'SurveyQuestionChoices', surveyQuestionChoiceProperties, tableName="surveysQuestionsChoices" ).dbTableFile().dtoFile()
+    ]
+
+    surveyQuestionExpansions = {
+        'single': {
+            'surveyQuestionChoice': {
+                'dbtable': 'surveyQuestionChoice',
+                'pk':'id'
+            }
+        }
+    }
+
+    surveyForeignProperties = [
+        ABMCreator('SurveyKeyword', 'SurveyKeywords',  surveyKeywordProperties, tableName="surveysKeywords" ).dbTableFile().dtoFile(),
+        ABMCreator('SurveyQuestion','SurveyQuestions', surveyQuestionProperties, surveyQuestionForeignProperties, surveyQuestionExpansions, tableName="surveysQuestions").dbTableFile().dtoFile()
+    ]
+
+    ABMCreator('SurveyQuestion','SurveyQuestions', surveyQuestionProperties, surveyQuestionForeignProperties, surveyQuestionExpansions, tableName="surveysQuestions").modelFile().execute()
+
+
+    surveyExpansions = {
+        'single': {
+            'surveyQuestion': {
+                'dbtable': 'surveyQuestion',
+                'pk':'id'
+            },
+            'surveyKeyword': {
+                'dbtable': 'surveyKeyword',
+                'pk':'id'
+            }
+        }
+    }
+
+    # ABMCreator('Survey', 'Surveys', surveyProperties, surveyForeignProperties, surveyExpansions).backendABM().execute()
+
+    # =============================================================================
+    # === keywords
+    # =============================================================================
+    keywordProperties = {
+        'id': 'integer not null auto_increment',
+        'name': 'varchar(100)',
+        'origin': "enum ('media', 'survey')"
+    }
+    # ABMCreator('Keyword', 'keywords', keywordProperties).backendABM().execute()
+
+    # =============================================================================
+    # === Speakers
+    # =============================================================================
+    # speakersProperties = {
+    #     'id': 'integer not null auto_increment',
+    #     'name': 'varchar(100)',
+    #     'shortDescription': 'varchar(255)',
+    #     'languageCode': 'varchar(3)',
+    #     'image': 'varchar(255)'
+    # }
