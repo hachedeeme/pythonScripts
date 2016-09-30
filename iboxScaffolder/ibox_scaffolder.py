@@ -927,16 +927,19 @@ if __name__ == "__main__":
     eventProperties = {
         'id': 'integer not null auto_increment',
         'name': 'varchar(100)',
-        'longDescription': 'text',
+        'creationDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'startDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'endDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
+        'countryCode': 'varchar(3)',
         'shortDescription': 'varchar(255)',
+        'longDescription': 'text',
         'link': 'varchar(255)',
         'city': 'varchar(50)',
         'location': 'varchar(255)',
         'image': 'varchar(255)',
-        'countryCode': 'varchar(3)',
-        'creationDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-        'startDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP',
-        'endDate': 'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'
+        'smallImage': 'varchar(255)',
+        'mediumImage': 'varchar(255)',
+        'largeImage': 'varchar(255)'
     }
 
     eventSpeakerProp = {
@@ -980,7 +983,7 @@ if __name__ == "__main__":
         }
     }
 
-    # ABMCreator('Event', 'Events', eventProperties, eventForeignProperties, eventExpansions).backendABM().execute()
+    ABMCreator('Event', 'Events', eventProperties, eventForeignProperties, eventExpansions).backendABM().execute()
     
     # =============================================================================
     # === Country
@@ -1045,7 +1048,7 @@ if __name__ == "__main__":
         ABMCreator('SurveyQuestion','SurveyQuestions', surveyQuestionProperties, surveyQuestionForeignProperties, surveyQuestionExpansions, tableName="surveysQuestions").dbTableFile().dtoFile()
     ]
 
-    ABMCreator('SurveyQuestion','SurveyQuestions', surveyQuestionProperties, surveyQuestionForeignProperties, surveyQuestionExpansions, tableName="surveysQuestions").modelFile().execute()
+    #ABMCreator('SurveyQuestion','SurveyQuestions', surveyQuestionProperties, surveyQuestionForeignProperties, surveyQuestionExpansions, tableName="surveysQuestions").modelFile().execute()
 
 
     surveyExpansions = {
