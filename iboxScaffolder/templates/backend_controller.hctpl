@@ -47,6 +47,8 @@ class Teleperformance_{{{upper_plural_name}}}Controller extends Turisweb_Rest_Co
         $this->_{{{lower_name}}}Model->insert($form->getValues());
         $this->getResponse()->setHttpResponseCode(200);
       } catch (Exception $e) {
+        $this->view->error = $e->getMessage();
+        $this->view->trace = $e->getTrace();
         $this->getResponse()->setHttpResponseCode(500);
       }
     } else {
