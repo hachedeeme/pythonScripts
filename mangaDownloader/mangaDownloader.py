@@ -1,18 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import re
 import os
 import codecs
 import urllib.request
 import urllib.parse
-from html.parser import HTMLParser
-
-def get_int_from(aString):
-  return int(re.search(r'\d+', aString).group())
-
-def get_title(title):
-  return title.split(': ')[1]
+from htmlParsers.JokerFansubHTMLParser import JokerFansubHTMLParser
 
 escape_range = [
   (0xA0, 0xD7FF),
@@ -61,33 +54,6 @@ def iri2uri(uri):
     uri = urllib.parse.urlunsplit((scheme, authority, path, query, fragment))
     uri = "".join([encode(c) for c in uri])
   return uri
-
-class JokerFansubHTMLParser(HTMLParser):
-  def __init__(self, path):
-    super(JokerFansubHTMLParser, self).__init__(convert_charrefs=True)
-    self.data  = {}
-    self.attrs = []
-    self.path  = path
-
-  def handle_starttag(self, tag, attrs):
-    if tag == 'img':
-      if ('class', 'open') in attrs:
-        for name, value in attrs:
-          if name == 'src':
-            self.data['imagePath'] = str(value)
-    if tag == 'a':
-      for name, value in attrs:
-        if name == 'href' and self.path in value:
-          self.data['nextPage'] = str(value)
-          self.attrs.append(attrs)
-        if name == 'onclick' and 'changePage(' in value:
-          self.data['lastPage'] = get_int_from(value) + 1
-
-  def find_chapter_name(self, vol, chapter):
-    ref = ('href',self.path + str(vol) + '/' + str(chapter) + '/')
-    for attr in self.attrs:
-      if ref in attr:
-        return get_title(attr[1][1])
 
 class MangaDownloader():
   def __init__(self, mangas, path, parser):
