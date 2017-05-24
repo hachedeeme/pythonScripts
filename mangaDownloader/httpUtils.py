@@ -25,21 +25,21 @@ escape_range = [
 ]
 
 def encode(c):
-  retval = c
-  i = ord(c)
+  ret = c
+  i   = ord(c)
   for low, high in escape_range:
-    if i < low:
+    if i <  low:
       break
     if i >= low and i <= high:
-      retval = "".join(["%%%2X" % o for o in c.encode('utf-8')])
+      ret = "".join(["%%%2X" % o for o in c.encode('utf-8')])
       break
-  return retval
+  return ret
     
 def iri2uri(uri):
   """Convert an IRI to a URI. Note that IRIs must be
   passed in a unicode strings. That is, do not utf-8 encode
   the IRI before passing it into the function."""
-  if isinstance(uri ,str):
+  if isinstance(uri, str):
     (scheme, authority, path, query, fragment) = urllib.parse.urlsplit(uri)
     authority = authority.encode('idna').decode('utf-8')
     # For each character in 'ucschar' or 'iprivate'
